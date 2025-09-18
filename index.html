@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 潛力客智選導航｜決策矩陣 (Client‑Only)</title>
+  <style>
+    :root{
+      --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--ok:#2ecc71;--warn:#f1c40f;--risk:#e74c3c;--chip:#233055;
+    }
+    html,body{height:100%;}
+    body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto;}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px;}
+    .hero{display:flex;gap:20px;align-items:center;}
+    .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:var(--brand);padding:6px 10px;border-radius:999px;border:1px solid #1d2a4d}
+    h1{font-size:28px;margin:4px 0 8px}
+    p.muted{color:var(--muted);margin:0}
+    .panel{background:var(--panel);border:1px solid #1b2340;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+    .grid{display:grid;gap:16px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    .btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;background:#1a2347;color:#e9efff;cursor:pointer}
+    .btn:hover{filter:brightness(1.1)}
+    .btn.primary{background:linear-gradient(135deg,#1e6fff,#3cc7ff);color:#00122a}
+    input[type=file]{display:none}
+    label.file{display:inline-flex;gap:10px;align-items:center;background:#132142;border:1px dashed #2a3b6a;padding:12px 14px;border-radius:12px;cursor:pointer}
+    .kv{display:flex;gap:10px;align-items:center;}
+    .kv .k{color:#98a8c6}
+    .matrix{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:96px;border:1px solid #2a355c;border-radius:12px;overflow:hidden}
+    .cell{border:1px solid #2a355c;padding:10px;position:relative}
+    .cell h4{margin:0 0 6px;font-size:14px}
+    .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600}
+    .pill.ok{background:#153726;color:#7bffab;border:1px solid #215e3c}
+    .pill.warn{background:#3b330e;color:#ffe27a;border:1px solid #6a5618}
+    .pill.risk{background:#3b1414;color:#ff9d9d;border:1px solid #6a1a1a}
+    .num{font-size:22px;font-weight:700}
+    .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
+    .tbl th,.tbl td{border-bottom:1px solid #233055;padding:8px 10px;text-align:left}
+    .tbl th{background:#0f1733;color:#a9b9db;position:sticky;top:0}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:var(--chip);border:1px solid #233055;padding:4px 8px;border-radius:999px}
+    .code{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0f1430;padding:10px;border-radius:8px;border:1px solid #1c2550}
+    footer{opacity:.7;margin:24px 0 40px}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .right{margin-left:auto}
+    .notice{background:#0f1430;border:1px solid #22306b;padding:10px 12px;border-radius:10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <span class="badge"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.8 1.7 7.2L12 17l-6.2 4.5 1.7-7.2L2 9.5 9 9z"/></svg> AI 潛力客智選導航</span>
+      <div>
+        <h1>決策矩陣（純前端、不回傳）</h1>
+        <p class="muted">將公司提供的名單以 <b>CSV</b> 匯入，於瀏覽器內計算 <b>推薦R / 關注A</b> 分數、<b>九宮格決策</b> 與（選配）<b>模擬貢獻金額</b>。所有運算皆在本機端完成。</p>
+      </div>
+    </div>
+
+    <div class="panel" id="uploader">
+      <div class="row">
+        <label class="file" for="csvInput">📄 匯入 CSV（UTF‑8）</label>
+        <input id="csvInput" type="file" accept=".csv" />
+        <button class="btn" id="btnDemo">載入示範資料</button>
+        <button class="btn" id="btnClear">清空</button>
+        <div class="right kv"><span class="k">資料筆數：</span><b id="statRows">0</b></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="notice">欄位需求請參見下方 <b>欄位對應 / 規則設定</b>。若公司提供 <i>XLSX</i>，可先另存為 <i>CSV</i> 再匯入，或將 <code>xlsx.full.min.js</code> 置於同一資料夾並修改程式以支援（離線）。</div>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <div class="panel">
+        <div class="row"><h3 style="margin:0">九宮格決策摘要</h3><button class="btn right" id="btnDownload">匯出結果 CSV</button></div>
+        <div class="matrix" id="matrix"></div>
+      </div>
+      <div class="panel">
+        <h3 style="margin:0 0 8px">篩選</h3>
+        <div class="chips" id="filters"></div>
+        <div class="row" style="margin-top:10px">
+          <label class="kv"><span class="k">客群類型：</span>
+            <select id="selEntity" class="btn">
+              <option value="auto">自動（依是否有公司欄位推斷）</option>
+              <option value="natural">自然人</option>
+              <option value="corp">法人</option>
+            </select>
+          </label>
+          <label class="kv"><span class="k">顯示筆數：</span>
+            <select id="selPage" class="btn">
+              <option>50</option><option>100</option><option>200</option><option>全部</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h3 style="margin:0 0 8px">計算結果</h3>
+      <div style="max-height:360px;overflow:auto">
+        <table class="tbl" id="resultTbl"></table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:16px">
+      <h3 style="margin:0 0 8px">欄位對應 / 規則設定（可依公司資料調整）</h3>
+      <pre class="code" id="cfgView"></pre>
+    </div>
+
+    <footer>© 2025 AIT3 Demo • Client‑Only • 無資料上傳</footer>
+  </div>
+
+<script>
+// === 1) 設定（可改） ==========================================================
+const CFG = {
+  // 九宮格切點（>=hi 為高，>=mid 為中，否則低）
+  cut: { R: {hi: 70, mid: 40}, A: {hi: 70, mid: 40} },
+  // 九宮格標籤（依 R×A 區間）
+  labels: {
+    HH: { code: 'B1', title: '立即挽留', tone:'risk' },   // R高×A高
+    HM: { code: 'B2', title: '優先關懷', tone:'warn' },   // R高×A中
+    HL: { code: 'A1', title: '立即開發', tone:'ok'   },   // R高×A低
+    MH: { code: 'B3', title: '關注提升', tone:'warn' },   // R中×A高
+    MM: { code: 'C2', title: '一般維護', tone:'warn' },   // R中×A中
+    ML: { code: 'A2', title: '可開發',   tone:'ok'   },   // R中×A低
+    LH: { code: 'C3', title: '風險排查', tone:'risk' },   // R低×A高
+    LM: { code: 'C1', title: '觀察',     tone:'warn' },   // R低×A中
+    LL: { code: 'D1', title: '暫緩',     tone:''     }    // R低×A低
+  },
+  // 欄位對應（公司 CSV 標題 → 內部代碼）。示範資料請參見下方 demoCSV。
+  map: {
+    id: 'id',
+    name: 'name',
+    // 自然人常用欄位
+    aum: 'aum_12m',
+    depNow: 'avg_dep_3m',
+    depPrev: 'avg_dep_prev3m',
+    lastDays: 'last_txn_days',
+    salary: 'salary',
+    degree: 'degree',   // 學歷：高中=1, 大學=2, 研究所=3, 博士=4
+    vip: 'vip_tier',    // 一般/VIP/VVIP/高資產
+    prodKinds: 'prod_kinds', // 產品大類數（四線滲透）
+
+    // 法人欄位
+    fxNow: 'fx_3m',
+    fxPrev: 'fx_prev3m',
+    capital: 'capital',
+    years: 'company_age_years',
+    rating: 'credit_rating', // 1(最好)~10(最差) 或 AAA/A/… → 會自動轉
+    diversity: 'biz_diversity', // 往來大類數
+
+    // 共通
+    blacklist: 'compliance_blacklist', // 1/0 或 true/false
+    entity: 'entity' // natural/corp（若沒有此欄會自動判斷）
+  },
+  // 權重（0~100，最後會正規化到 0~100）
+  weight: {
+    natural: {
+      R: { depGrowth: 30, aum: 30, vip: 15, degree: 10, salary: 10, prod: 5 },
+      A: { depDrop: 45, inactive: 35, riskFlag: 20 },
+      white: { // 白地：四線滲透低 且 存款正成長 → 推薦加成
+        prodMax: 1, prodLow: 1, boost: 10
+      }
+    },
+    corp: {
+      R: { depGrowth: 25, fxGrowth: 25, capital: 15, years: 10, rating: 15, diversity: 10 },
+      A: { depDrop: 50, /* 可視需要再加：異常轉出等 */ },
+      white: { // 白地：多樣性低 + 存款/外匯成長 → 推薦加成
+        diversityMax: 2, boostEach: 5 // deposit/FX 各 +5 上限 +10
+      }
+    }
+  },
+  // 模擬貢獻金額（選用）。若不需要可設為 false。
+  revenue: {
+    enable: true,
+    range: [100000, 10000000], // 10萬～1000萬
+    nat: { NIM: 0.012, FEE_INV: 0.006, FEE_TRANS: 0.0015, LOAN_SPREAD: 0.02,
+      vipUplift: { '一般':1.00, 'VIP':1.10, 'VVIP':1.20, '高資產':1.15 },
+      R_WEIGHT: 0.5, A_WEIGHT: 0.5, FACTOR_MIN: 0.7, FACTOR_MAX: 1.5
+    },
+    corp: { NIM: 0.010, FX_SPREAD: 0.0008, NETBANK_FEE: 12,
+      levelUplift: { '高':1.2, '中':1.0, '低':0.8 },
+      R_WEIGHT: 0.5, A_WEIGHT: 0.5, FACTOR_MIN: 0.7, FACTOR_MAX: 1.6
+    }
+  }
+};
+
+// === 2) 小工具 ================================================================
+const el = sel => document.querySelector(sel);
+const fmt = n => n?.toLocaleString('zh-TW');
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+const pct = x => clamp(Math.round(x*100),0,100);
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+const asNum = v => v===''||v==null? NaN : (typeof v==='number'?v:Number(v.toString().replace(/[,\s]/g,'')));
+const ratingToScore = v => { // 企業評等：分數越好 R 越高
+  if (v==null) return 50; const s = String(v).toUpperCase();
+  if (/^(AAA|AA\+?)$/.test(s)) return 95;
+  if (/^(AA-|A\+)$/.test(s)) return 85;
+  if (/^(A|A-|BBB\+)$/.test(s)) return 75;
+  const n = Number(s); if (!isNaN(n)) return clamp(110 - n*10, 10, 95);
+  return 60;
+};
+const tierToScore = v => ({'一般':50,'VIP':75,'VVIP':90,'高資產':85}[String(v)] ?? 50);
+
+function csvParse(text){
+  // 極簡 CSV 解析（支援雙引號與逗號）
+  const rows=[]; let i=0, field='', row=[], q=false; const push=()=>{row.push(field);field=''};
+  const pushRow=()=>{rows.push(row); row=[]};
+  while(i<text.length){
+    const c=text[i++];
+    if(q){ if(c==='"'){ if(text[i]==='"'){ field+='"'; i++; } else q=false; }
+           else field+=c; continue; }
+    if(c==='"'){ q=true; continue; }
+    if(c===','){ push(); continue; }
+    if(c==='\n'){ push(); pushRow(); continue; }
+    if(c==='\r'){ continue; }
+    field+=c;
+  }
+  push(); if(row.length) pushRow();
+  const hdr=rows.shift(); if(!hdr) return [];
+  return rows.filter(r=>r.some(x=>x!==''))
+    .map(r=>Object.fromEntries(hdr.map((h,idx)=>[h.trim(), r[idx]??''])));
+}
+
+// 白地條件工具
+function whiteBoostNatural(rec){
+  const m=CFG.map; const prod = asNum(rec[m.prodKinds]);
+  const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
+  const g = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+  if(prod <= CFG.weight.natural.white.prodLow && g>0){ return CFG.weight.natural.white.boost; }
+  return 0;
+}
+function whiteBoostCorp(rec){
+  const m=CFG.map; const div = asNum(rec[m.diversity]);
+  let b = 0;
+  const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
+  const fxNow=asNum(rec[m.fxNow]), fxPrev=asNum(rec[m.fxPrev]);
+  if(div <= CFG.weight.corp.white.diversityMax){
+    const dg = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+    const fg = isNum(fxNow)&&isNum(fxPrev)&&fxPrev>0? (fxNow-fxPrev)/fxPrev : 0;
+    if(dg>0) b += CFG.weight.corp.white.boostEach;
+    if(fg>0) b += CFG.weight.corp.white.boostEach;
+  }
+  return b;
+}
+
+// === 3) 核心計分 ==============================================================
+function scoreNatural(rec){
+  const m=CFG.map, w=CFG.weight.natural;
+  // 推薦 R （正向）
+  const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
+  const depG = (isNum(depNow)&&isNum(depPrev)&&depPrev>0)? (depNow-depPrev)/depPrev : 0; // 成長率
+  const aum = asNum(rec[m.aum]);
+  const vipS = tierToScore(rec[m.vip]);
+  const degS = clamp((asNum(rec[m.degree])||0)*25, 0, 100); // 1~4 → 25~100
+  const sal = asNum(rec[m.salary]);
+  const prod = asNum(rec[m.prodKinds]);
+
+  let R = 0;
+  R += w.R.depGrowth * clamp((depG+0.2)/0.4, 0, 1); // -20%~+20% → 0~1
+  R += w.R.aum * clamp((aum||0)/1e8, 0, 1);         // 0~1億 正規化
+  R += w.R.vip * (vipS/100);
+  R += w.R.degree * (degS/100);
+  R += w.R.salary * clamp((sal||0)/2e6, 0, 1);      // 年薪 0~200萬
+  R += w.R.prod * clamp((prod||0)/4, 0, 1);         // 四線滲透 0~4
+
+  // 關注 A（負向）
+  const last = asNum(rec[m.lastDays]);
+  let A = 0;
+  const depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0; // 0~-30%
+  A += w.A.depDrop * depDrop;
+  A += w.A.inactive * clamp((last-90)/180, 0, 1); // 超過 90 天未交易 → 最高 180 天
+  A += w.A.riskFlag * (String(rec[m.blacklist]).match(/^(1|true|Y)$/i)? 1 : 0);
+
+  // 白地加權（正向加成，僅加到 R）
+  R += whiteBoostNatural(rec);
+
+  // 正規化到 0~100
+  const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + CFG.weight.natural.white.boost));
+  const A100 = pct(A/ (Object.values(w.A).reduce((a,b)=>a+b,0)));
+
+  return {R:R100, A:A100};
+}
+
+function scoreCorp(rec){
+  const m=CFG.map, w=CFG.weight.corp;
+  const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
+  const fxNow=asNum(rec[m.fxNow]); const fxPrev=asNum(rec[m.fxPrev]);
+  const cap = asNum(rec[m.capital]);
+  const yrs = asNum(rec[m.years]);
+  const rat = ratingToScore(rec[m.rating]);
+  const div = asNum(rec[m.diversity]);
+
+  const depG = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+  const fxG  = isNum(fxNow)&&isNum(fxPrev)&&fxPrev>0? (fxNow-fxPrev)/fxPrev : 0;
+
+  let R = 0; let A = 0;
+  R += w.R.depGrowth * clamp((depG+0.2)/0.4, 0, 1);
+  R += w.R.fxGrowth  * clamp((fxG+0.2)/0.4, 0, 1);
+  R += w.R.capital   * clamp(cap/5e8, 0, 1);   // 資本額 0~5億
+  R += w.R.years     * clamp((yrs||0)/30, 0, 1); // 0~30 年
+  R += w.R.rating    * (rat/100);
+  R += w.R.diversity * clamp((div||0)/6, 0, 1);
+
+  const depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;
+  A += (w.A.depDrop||0) * depDrop;
+
+  R += whiteBoostCorp(rec);
+
+  const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + 10));
+  const A100 = pct(A/ (Object.values(w.A).reduce((a,b)=>a+b,0)||100));
+  return {R:R100, A:A100};
+}
+
+function decideCell(R,A){
+  const c=CFG.cut;
+  const rc = R>=c.R.hi? 'H' : R>=c.R.mid? 'M' : 'L';
+  const ac = A>=c.A.hi? 'H' : A>=c.A.mid? 'M' : 'L';
+  return rc+ac; // 例如 HL
+}
+
+function computeRevenue(rec, entity, R, A){
+  const cfg=CFG.revenue; if(!cfg?.enable) return null;
+  if(entity==='corp'){
+    const m=CFG.map, p=cfg.corp;
+    const base = (asNum(rec[m.depNow])||0)*p.NIM + (asNum(rec[m.fxNow])||0)*p.FX_SPREAD*4 + (asNum(rec['netbank_txn']||0)||0)*p.NETBANK_FEE*4;
+    const factor = clamp(1 + p.R_WEIGHT*(R/100) - p.A_WEIGHT*(A/100), p.FACTOR_MIN, p.FACTOR_MAX);
+    const rev = base * factor;
+    return rev;
+  } else {
+    const m=CFG.map, p=cfg.nat;
+    const base = (asNum(rec[m.depNow])||0)*p.NIM + (asNum(rec[m.aum])||0)*p.FEE_INV + (asNum(rec['txn_amt_3m']||0)||0)*p.FEE_TRANS*12 + (asNum(rec['loan_util']||0)||0)*(asNum(rec[m.depNow])||0)*p.LOAN_SPREAD;
+    const vip = p.vipUplift[String(rec[m.vip])]||1;
+    const factor = clamp(1 + p.R_WEIGHT*(R/100) - p.A_WEIGHT*(A/100), p.FACTOR_MIN, p.FACTOR_MAX);
+    return base * factor * vip;
+  }
+}
+
+// === 4) 推斷客群 / 合規排除 ====================================================
+function inferEntity(rec){
+  const e = String(rec[CFG.map.entity]||'').toLowerCase();
+  if(e==='natural'||e==='corp') return e;
+  // 若有公司欄位（例如 capital 或 biz_diversity）則視為法人
+  const corpHints=[CFG.map.capital, CFG.map.diversity, CFG.map.fxNow, CFG.map.fxPrev];
+  if(corpHints.some(h=>rec[h]!=null && rec[h]!=='')) return 'corp';
+  return 'natural';
+}
+
+function isExcluded(rec){
+  const v = String(rec[CFG.map.blacklist]||'').trim();
+  return /^(1|true|Y)$/i.test(v);
+}
+
+// === 5) 主流程 =================================================================
+let raw=[], enriched=[], viewFilter='ALL';
+
+function process(){
+  const rows = raw;
+  enriched = rows.map(rec=>{
+    const entity = (el('#selEntity').value==='auto')? inferEntity(rec) : el('#selEntity').value;
+    if(isExcluded(rec)) return { ...rec, entity, excluded:true };
+    const {R,A} = (entity==='corp')? scoreCorp(rec) : scoreNatural(rec);
+    const cell = decideCell(R,A);
+    let revenue = computeRevenue(rec, entity, R, A);
+    if(revenue!=null){ // 線性到目標區間（保持排序）
+      revenue = rescale(enriched, revenue, CFG.revenue.range);
+    }
+    return { ...rec, entity, R, A, cell, excluded:false, revenue };
+  });
+  render();
+}
+
+// 線性縮放工具：以當前值與已計算分佈做穩健縮放
+function rescale(arr, v, [lo,hi]){
+  const vals = arr.map(r=>r.revenue).filter(isNum).concat([v]);
+  const pLow = quantile(vals, 0.02), pHigh = quantile(vals, 0.98);
+  if(pHigh===pLow) return lo;
+  const t = clamp((v - pLow)/(pHigh - pLow), 0, 1);
+  return Math.round(lo + t*(hi-lo));
+}
+function quantile(a, q){ const b=[...a].sort((x,y)=>x-y); const i=(b.length-1)*q; const l=Math.floor(i), r=Math.ceil(i); if(l===r) return b[l]; return b[l]*(r-i)+b[r]*(i-l); }
+
+function render(){
+  // 九宮格
+  const groups = groupBy(enriched.filter(r=>!r.excluded), r=>r.cell);
+  const m = el('#matrix');
+  m.innerHTML='';
+  const order=['HH','HM','HL','MH','MM','ML','LH','LM','LL'];
+  for(const key of order){
+    const meta = CFG.labels[key];
+    const count = (groups[key]||[]).length;
+    const pill = meta.tone==='ok'?'ok': meta.tone==='warn'?'warn': meta.tone==='risk'?'risk':'';
+    const div = document.createElement('div'); div.className='cell';
+    div.innerHTML = `<h4>${meta.code}｜${meta.title}</h4>
+      <div class="row"><span class="pill ${pill}">筆數</span> <span class="num">${fmt(count)}</span></div>`;
+    div.onclick = ()=>{ viewFilter = key; renderTable(); highlightFilter(); };
+    m.appendChild(div);
+  }
+  // 篩選 chips
+  const f = el('#filters'); f.innerHTML='';
+  const all = document.createElement('button'); all.className='btn'; all.textContent='顯示全部'; all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();}; f.appendChild(all);
+  for(const key of order){ const b=document.createElement('button'); b.className='btn'; b.textContent=`${CFG.labels[key].code}`; b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();}; f.appendChild(b); }
+  highlightFilter();
+  // 表格
+  renderTable();
+  // 設定檢視
+  el('#cfgView').textContent = JSON.stringify(CFG, null, 2);
+}
+
+function highlightFilter(){
+  [...document.querySelectorAll('#filters .btn')].forEach(b=>b.style.outline='none');
+  const idx = ['ALL','HH','HM','HL','MH','MM','ML','LH','LM','LL'].indexOf(viewFilter);
+  if(idx>=0){ document.querySelectorAll('#filters .btn')[idx].style.outline='2px solid var(--brand)'; }
+}
+
+function renderTable(){
+  const tbl=el('#resultTbl');
+  const cols=['id','name','entity','R','A','cell','revenue'];
+  const headers=['ID','名稱','客群','R(推薦)','A(關注)','矩陣','模擬貢獻'];
+  const rows = enriched.filter(r=>!r.excluded && (viewFilter==='ALL'||r.cell===viewFilter));
+  const limit = el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
+  tbl.innerHTML = '<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
+  const body = document.createElement('tbody');
+  for(const r of rows.slice(0,limit)){
+    const tr=document.createElement('tr');
+    const values=[r[CFG.map.id], r[CFG.map.name], r.entity==='corp'?'法人':'自然人', r.R, r.A, `${CFG.labels[r.cell].code}｜${CFG.labels[r.cell].title}`, r.revenue? fmt(Math.round(r.revenue)) : '' ];
+    tr.innerHTML = values.map((v,i)=>`<td>${i===3||i===4? (v+'%'): v??''}</td>`).join('');
+    body.appendChild(tr);
+  }
+  tbl.appendChild(body);
+  el('#statRows').textContent = fmt(enriched.filter(r=>!r.excluded).length);
+}
+
+function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
+
+// === 6) 匯入 / 匯出 ============================================================
+function toCSV(arr){
+  if(!arr.length) return '';
+  const cols=['id','name','entity','R','A','cell','revenue'];
+  const hdr=cols.join(',');
+  const lines=arr.filter(r=>!r.excluded).map(r=>[
+    r[CFG.map.id], r[CFG.map.name], r.entity, r.R, r.A, r.cell, Math.round(r.revenue||0)
+  ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
+  return [hdr, ...lines].join('\n');
+}
+
+el('#btnDownload').onclick=()=>{
+  const csv = toCSV(enriched);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_result.csv'; a.click();
+};
+
+el('#csvInput').addEventListener('change', async(e)=>{
+  const file=e.target.files?.[0]; if(!file) return;
+  const text = await file.text();
+  raw = csvParse(text);
+  process();
+});
+
+el('#btnClear').onclick=()=>{ raw=[]; enriched=[]; render(); el('#csvInput').value=''; };
+
+// === 7) 示範資料（可刪） =======================================================
+const demoCSV = `id,name,entity,${CFG.map.aum},${CFG.map.depNow},${CFG.map.depPrev},${CFG.map.lastDays},${CFG.map.salary},${CFG.map.degree},${CFG.map.vip},${CFG.map.prodKinds},${CFG.map.fxNow},${CFG.map.fxPrev},${CFG.map.capital},${CFG.map.years},${CFG.map.rating},${CFG.map.diversity},${CFG.map.blacklist}
+N001,王小智,natural,52000000,1800000,1500000,30,1600000,3,VIP,3,,,,,,0
+N002,林學成,natural,8000000,200000,260000,210,780000,2,一般,1,,,,,,0
+N003,張博士,natural,120000000,4500000,3700000,10,3200000,4,VVIP,4,,,,,,0
+C101,宏泰實業,corp,,12000000,9000000,, , , , ,38000000,26000000,800000000,18,A,3,0
+C102,景勝科技,corp,,2200000,2600000,, , , , ,9000000,6000000,200000000,32,AA,2,0
+C103,大鼎股份,corp,,1200000,1800000,, , , , ,1200000,3000000,50000000,6,BBB,1,0
+X999,黑名單測試,natural,0,1000000,1100000,20,500000,2,一般,1,,,,,,1`;
+
+el('#btnDemo').onclick=()=>{ raw = csvParse(demoCSV); process(); };
+
+document.addEventListener('change', e=>{ if(e.target.id==='selEntity' || e.target.id==='selPage'){ renderTable(); }});
+
+// 初始渲染
+render();
+</script>
+</body>
+</html>
