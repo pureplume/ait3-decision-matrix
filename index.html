@@ -101,11 +101,6 @@
       </div>
     </div>
 
-    <div class="panel" style="margin-top:16px">
-      <h3 style="margin:0 0 8px">欄位對應 / 規則設定（可依公司資料調整）</h3>
-      <pre class="code" id="cfgView"></pre>
-    </div>
-
     <footer>© 2025 AIT3 Demo • Client‑Only • 無資料上傳</footer>
   </div>
 
@@ -116,15 +111,15 @@ const CFG = {
   cut: { R: {hi: 70, mid: 40}, A: {hi: 70, mid: 40} },
   // 九宮格標籤（依 R×A 區間）
   labels: {
-    HH: { code: 'B1', title: '立即挽留', tone:'risk' },   // R高×A高
-    HM: { code: 'B2', title: '優先關懷', tone:'warn' },   // R高×A中
-    HL: { code: 'A1', title: '立即開發', tone:'ok'   },   // R高×A低
-    MH: { code: 'B3', title: '關注提升', tone:'warn' },   // R中×A高
-    MM: { code: 'C2', title: '一般維護', tone:'warn' },   // R中×A中
-    ML: { code: 'A2', title: '可開發',   tone:'ok'   },   // R中×A低
-    LH: { code: 'C3', title: '風險排查', tone:'risk' },   // R低×A高
-    LM: { code: 'C1', title: '觀察',     tone:'warn' },   // R低×A中
-    LL: { code: 'D1', title: '暫緩',     tone:''     }    // R低×A低
+    HL: { code: 'A1', title: '高潛力開發', tone:'ok'   },   // 推薦高 × 關注低
+    HM: { code: 'A2', title: '高潛力監測', tone:'warn' },   // 推薦高 × 關注中
+    HH: { code: 'B1', title: '高潛力警示', tone:'risk' },   // 推薦高 × 關注高
+    ML: { code: 'C1', title: '中潛力維護', tone:'ok'   },   // 推薦中 × 關注低
+    MM: { code: 'C2', title: '中潛力監測', tone:'warn' },   // 推薦中 × 關注中
+    MH: { code: 'B2', title: '中潛力警示', tone:'risk' },   // 推薦中 × 關注高
+    LL: { code: 'C3', title: '低潛力維護', tone:'ok'   },   // 推薦低 × 關注低
+    LM: { code: 'C4', title: '低潛力監測', tone:'warn' },   // 推薦低 × 關注中
+    LH: { code: 'Z',  title: '合規排除',   tone:'risk' }    // 推薦低 × 關注高
   },
   // 欄位對應（公司 CSV 標題 → 內部代碼）。示範資料請參見下方 demoCSV。
   map: {
@@ -384,7 +379,7 @@ function render(){
   const groups = groupBy(enriched.filter(r=>!r.excluded), r=>r.cell);
   const m = el('#matrix');
   m.innerHTML='';
-  const order=['HH','HM','HL','MH','MM','ML','LH','LM','LL'];
+  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
   for(const key of order){
     const meta = CFG.labels[key];
     const count = (groups[key]||[]).length;
@@ -402,8 +397,7 @@ function render(){
   highlightFilter();
   // 表格
   renderTable();
-  // 設定檢視
-  el('#cfgView').textContent = JSON.stringify(CFG, null, 2);
+
 }
 
 function highlightFilter(){
