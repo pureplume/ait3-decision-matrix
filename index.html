@@ -28,11 +28,11 @@
     .kv .k{color:#98a8c6}
     .matrix{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:96px;border:1px solid #2a355c;border-radius:12px;overflow:hidden}
     .cell{border:1px solid #2a355c;padding:10px;position:relative}
-    .cell h4{margin:0 0 6px;font-size:14px}
+    .cell h4{margin:0 0 6px;font-size:14px;color:#000000}
     .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600}
-    .pill.ok{background:#153726;color:#7bffab;border:1px solid #215e3c}
-    .pill.warn{background:#3b330e;color:#ffe27a;border:1px solid #6a5618}
-    .pill.risk{background:#3b1414;color:#ff9d9d;border:1px solid #6a1a1a}
+    .pill.ok{background:#000000;color:#ffffff;border:1px solid #000000}
+    .pill.warn{background:#000000;color:#ffffff;border:1px solid #000000}
+    .pill.risk{background:#000000;color:#ffffff;border:1px solid #000000}
     .num{font-size:22px;font-weight:700}
     .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
     .tbl th,.tbl td{border-bottom:1px solid #233055;padding:8px 10px;text-align:left}
@@ -56,15 +56,7 @@
    .cell-C3 { background:#fff176; } /* 低潛力維護 */
    .cell-C4 { background:#fff176; } /* 低潛力監測 */
    .cell-Z  { background:#ef9a9a; } /* 合規排除 */
-   .num {
-   font-size:22px;
-   font-weight:700;
-   color:#ffffff;        /* 白字 */
-   background:#000000;   /* 黑底 */
-   padding:2px 6px;      /* 內距，讓背景包住字 */
-   border-radius:6px;    /* 圓角 */
-   display:inline-block; /* 讓背景正常顯示 */
- }
+
   </style>
 </head>
 <body>
