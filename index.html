@@ -122,8 +122,19 @@
         <div class="right kv"><span class="k">資料筆數：</span><b id="statRows">0</b></div>
       </div>
       <div class="row" style="margin-top:10px">
-        <div class="notice">欄位需求請參見下方 <b>欄位對應 / 規則設定</b>。若公司提供 <i>XLSX</i>，可先另存為 <i>CSV</i> 再匯入，或將 <code>xlsx.full.min.js</code> 置於同一資料夾並修改程式以支援（離線）。</div>
+        <div class="notice">欄位需求請參見下方 <b>CSV 欄位說明</b>（順序不拘，但表頭名稱需對應；不適用欄位留空）。</div>
       </div>
+
+      <!-- ✅ 新增：CSV 欄位說明（自動依 CFG.map 生成） -->
+      <details style="margin-top:10px">
+        <summary class="btn">CSV 欄位說明與範本（點我展開）</summary>
+        <div id="fieldGuide"></div>
+        <div style="margin-top:10px">
+          <div class="kv"><span class="k">完整表頭範本（順序可自由調整）：</span></div>
+          <pre class="code" id="csvHeaderSample"></pre>
+        </div>
+      </details>
+      <!-- /CSV 欄位說明 -->
     </div>
 
     <div class="grid cols-2" style="margin-top:16px">
@@ -209,9 +220,9 @@ const CFG = {
 
   // === 欄位對應（公司 CSV 標題 → 內部代碼）====================================
   map: {
-    id: 'id',                // [共通] 客戶ID
-    name: 'name',            // [共通] 客戶名稱
-    entity: 'entity',        // [共通] 客群類型（natural/corp）
+    id: 'id',                // [共通] 客戶ID（必填）
+    name: 'name',            // [共通] 客戶名稱（必填）
+    entity: 'entity',        // [共通] 客群類型（natural/corp）（必填）
     blacklist: 'compliance_blacklist', // [共通] 合規黑名單 1/0 或 true/false
 
     // === 自然人戶：客戶背景(靜態) ===
@@ -259,70 +270,22 @@ const CFG = {
     // === 自然人 ===
     natural: {
       R: {
-        // [B-自然人/行為監測] 存款成長率（近3月 vs 前3月）
-        depGrowth: 30,
-        // [B-自然人/客戶背景] AUM 規模
-        aum: 30,
-        // [B-自然人/客戶背景] VIP 等級
-        vip: 15,
-        // [B-自然人/客戶背景] 學歷
-        degree: 10,
-        // [B-自然人/客戶背景] 年薪
-        salary: 10,
-        // [B-自然人/滲透度] 產品大類數（四線滲透）
-        prod: 5,
-        // [B-自然人/行為監測] 交易金額成長（可依表上權重填值）
-        txnAmtGrowth: 0,
-        // [B-自然人/行為監測] 交易筆數成長（可依表上權重填值）
-        txnCntGrowth: 0,
-        // [B-自然人/行為監測] 貸款動用率（可依表上權重填值）
-        loanUtil: 0
+        depGrowth: 30, aum: 30, vip: 15, degree: 10, salary: 10, prod: 5,
+        txnAmtGrowth: 0, txnCntGrowth: 0, loanUtil: 0
       },
       A: {
-        // [B-自然人/行為監測] 存款下降（負向）
-        depDrop: 45,
-        // [B-自然人/行為監測] 不活躍（最近交易距今）
-        inactive: 35,
-        // [B-合規排除/黑名單] 風險旗標
-        riskFlag: 20,
-        // [B-自然人/數位行為] 網銀長期未登入（可依表上權重填值）
-        ebankDormant: 0,
-        // [B-自然人/信用卡] 卡片不活躍（可依表上權重填值）
-        cardDormant: 0
+        depDrop: 45, inactive: 35, riskFlag: 20, ebankDormant: 0, cardDormant: 0
       },
-      // 白地：四線滲透低 + 存款正成長 → 推薦加成
       white: { prodMax: 1, prodLow: 1, boost: 10 }
     },
 
     // === 法人 ===
     corp: {
       R: {
-        // [B-法人/行為監測] 存款成長率（近3月 vs 前3月）
-        depGrowth: 25,
-        // [B-法人/行為監測] 外匯量成長
-        fxGrowth: 25,
-        // [B-法人/客戶背景] 資本額
-        capital: 15,
-        // [B-法人/客戶背景] 成立年數
-        years: 10,
-        // [B-法人/客戶背景] 信評
-        rating: 15,
-        // [B-法人/往來多樣性] 產品/業務大類數
-        diversity: 10,
-        // [B-法人/行為監測] 交易金額成長（可依表上權重填值）
-        corpTxnAmtGrowth: 0,
-        // [B-法人/策略性產業] 高/中/低（可依表上權重填值）
-        strategic: 0,
-        // [B-法人/數位行為] 網銀使用量（可依表上權重填值）
-        netbankUse: 0
+        depGrowth: 25, fxGrowth: 25, capital: 15, years: 10, rating: 15, diversity: 10,
+        corpTxnAmtGrowth: 0, strategic: 0, netbankUse: 0
       },
-      A: {
-        // [B-法人/行為監測] 存款下降（負向）
-        depDrop: 50,
-        // [B-法人/異常交易] 非常態轉出旗標（可依表上權重填值）
-        outflowAbnormal: 0
-      },
-      // 白地：多樣性低 + 存款/外匯成長 → 推薦加成
+      A: { depDrop: 50, outflowAbnormal: 0 },
       white: { diversityMax: 2, boostEach: 5 }
     }
   },
@@ -389,6 +352,13 @@ function csvParse(text){
     .map(r=>Object.fromEntries(hdr.map((h,idx)=>[h.trim(), r[idx]??''])));
 }
 
+// === ✅ 單一檔＋型別欄（entity）：同義詞支援 ===
+const ENTITY_ALIAS = { '自然人':'natural', '個人':'natural', '法人':'corp', '公司':'corp' };
+function normalizeEntity(v){
+  const s = String(v||'').trim();
+  return ENTITY_ALIAS[s] || s.toLowerCase();
+}
+
 // 白地條件工具
 function whiteBoostNatural(rec){
   const m=CFG.map; const prod = asNum(rec[m.prodKinds]);
@@ -412,7 +382,6 @@ function whiteBoostCorp(rec){
 }
 
 // === 3) 核心計分 ==============================================================
-// 自然人：R（正向）、A（負向）
 function scoreNatural(rec){
   const m=CFG.map, w=CFG.weight.natural;
 
@@ -423,9 +392,9 @@ function scoreNatural(rec){
   const R_degree = clamp((asNum(rec[m.degree])||0)*0.25, 0, 1);               // 學歷 1~4 → 0~1
   const R_salary = clamp((asNum(rec[m.salary])||0)/2e6, 0, 1);                // 年薪 0~200萬
   const R_prod = clamp((asNum(rec[m.prodKinds])||0)/4, 0, 1);                  // 四線滲透 0~4
-  const R_txnAmtGrowth = growth01(rec[m.nat_txn_amt_3m], rec[m.nat_txn_amt_prev3m], 0.6); // 交易金額成長
-  const R_txnCntGrowth = growth01(rec[m.nat_txn_cnt_3m], rec[m.nat_txn_cnt_prev3m], 0.6); // 交易筆數成長
-  const R_loanUtil = clamp((asNum(rec[m.loan_util])||0), 0, 1);               // 貸款動用率
+  const R_txnAmtGrowth = growth01(rec[m.nat_txn_amt_3m], rec[m.nat_txn_amt_prev3m], 0.6);
+  const R_txnCntGrowth = growth01(rec[m.nat_txn_cnt_3m], rec[m.nat_txn_cnt_prev3m], 0.6);
+  const R_loanUtil = clamp((asNum(rec[m.loan_util])||0), 0, 1);
 
   let R=0;
   R += w.R.depGrowth     * R_depGrowth;
@@ -441,12 +410,12 @@ function scoreNatural(rec){
   // ---- A 指標（對應 B 模組）----
   const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
   const depG = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
-  const A_depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;                 // 存款下降
-  const A_inactive = clamp((asNum(rec[m.lastDays])-90)/180, 0, 1);            // 不活躍（>90天）
-  const A_risk = /^(1|true|Y)$/i.test(String(rec[m.blacklist]||''))? 1 : 0;   // 風險旗標
-  const ebLogin = asNum(rec[m.nat_ebank_login_3m]);                            // 網銀不活躍
+  const A_depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;
+  const A_inactive = clamp((asNum(rec[m.lastDays])-90)/180, 0, 1);
+  const A_risk = /^(1|true|Y)$/i.test(String(rec[m.blacklist]||''))? 1 : 0;
+  const ebLogin = asNum(rec[m.nat_ebank_login_3m]);
   const A_ebDormant = isNum(ebLogin)? clamp(1 - ebLogin/6, 0, 1):0;
-  const cardAct = asNum(rec[m.nat_card_active_3m]);                            // 卡片不活躍
+  const cardAct = asNum(rec[m.nat_card_active_3m]);
   const A_cardDormant = isNum(cardAct)? clamp(1 - cardAct/3, 0, 1):0;
 
   let A=0;
@@ -456,7 +425,6 @@ function scoreNatural(rec){
   A += w.A.ebankDormant  * A_ebDormant;
   A += w.A.cardDormant   * A_cardDormant;
 
-  // 白地正向加成（僅加 R）
   R += whiteBoostNatural(rec);
 
   const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + w.white.boost || 1));
@@ -464,21 +432,20 @@ function scoreNatural(rec){
   return {R:R100, A:A100};
 }
 
-// 法人：R（正向）、A（負向）
 function scoreCorp(rec){
   const m=CFG.map, w=CFG.weight.corp;
 
   // ---- R 指標（對應 B 模組）----
-  const R_depGrowth = growth01(rec[m.depNow], rec[m.depPrev], 0.4);           // 存款成長
-  const R_fxGrowth = growth01(rec[m.fxNow], rec[m.fxPrev], 0.6);              // 外匯成長
-  const R_capital = clamp((asNum(rec[m.capital])||0)/5e8, 0, 1);              // 資本額 0~5億
-  const R_years = clamp((asNum(rec[m.years])||0)/30, 0, 1);                   // 成立年數 0~30
-  const R_rating = ratingToScore(rec[m.rating])/100;                           // 信評
-  const R_diversity = clamp((asNum(rec[m.diversity])||0)/6, 0, 1);            // 多樣性 0~6
-  const R_corpTxnAmtGrowth = growth01(rec[m.corp_txn_amt_3m], rec[m.corp_txn_amt_prev3m], 0.6); // 交易金額成長
-  const strat = String(rec[m.corp_strategic]||'').trim();                      // 策略性產業
+  const R_depGrowth = growth01(rec[m.depNow], rec[m.depPrev], 0.4);
+  const R_fxGrowth = growth01(rec[m.fxNow], rec[m.fxPrev], 0.6);
+  const R_capital = clamp((asNum(rec[m.capital])||0)/5e8, 0, 1);
+  const R_years = clamp((asNum(rec[m.years])||0)/30, 0, 1);
+  const R_rating = ratingToScore(rec[m.rating])/100;
+  const R_diversity = clamp((asNum(rec[m.diversity])||0)/6, 0, 1);
+  const R_corpTxnAmtGrowth = growth01(rec[m.corp_txn_amt_3m], rec[m.corp_txn_amt_prev3m], 0.6);
+  const strat = String(rec[m.corp_strategic]||'').trim();
   const R_strategic = strat==='高'?1: strat==='中'?0.5: 0;
-  const R_netbankUse = clamp((asNum(rec[m.netbank_txn])||0)/20, 0, 1);        // 網銀使用量
+  const R_netbankUse = clamp((asNum(rec[m.netbank_txn])||0)/20, 0, 1);
 
   let R=0;
   R += w.R.depGrowth        * R_depGrowth;
@@ -494,14 +461,13 @@ function scoreCorp(rec){
   // ---- A 指標（對應 B 模組）----
   const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
   const depG = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
-  const A_depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;                  // 存款下降
-  const A_outflowAbn = /^(1|true|Y)$/i.test(String(rec[m.corp_outflow_abnormal]||''))? 1 : 0; // 異常轉出
+  const A_depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;
+  const A_outflowAbn = /^(1|true|Y)$/i.test(String(rec[m.corp_outflow_abnormal]||''))? 1 : 0;
 
   let A=0;
   A += (w.A.depDrop||0) * A_depDrop;
   A += (w.A.outflowAbnormal||0) * A_outflowAbn;
 
-  // 白地正向加成（僅加 R）
   R += whiteBoostCorp(rec);
 
   const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + 10 || 1));
@@ -534,9 +500,11 @@ function computeRevenue(rec, entity, R, A){
 
 // === 4) 推斷客群 / 合規排除 ====================================================
 function inferEntity(rec){
-  const e = String(rec[CFG.map.entity]||'').toLowerCase();
+  // ✅ 先看 entity 欄（最穩），並支援「自然人/法人」同義
+  const e = normalizeEntity(rec[CFG.map.entity]);
   if(e==='natural'||e==='corp') return e;
-  // 若有公司欄位（例如 capital 或 biz_diversity）則視為法人
+
+  // 備援：若沒有 entity，再依公司欄位推斷
   const corpHints=[CFG.map.capital, CFG.map.diversity, CFG.map.fxNow, CFG.map.fxPrev];
   if(corpHints.some(h=>rec[h]!=null && rec[h]!=='')) return 'corp';
   return 'natural';
@@ -581,13 +549,13 @@ function render(){
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
   const idOf = k => `cell-${k}`;
 
-  // 2) 寫入固定格子（不 append，避免跑版）
+  // 2) 寫入固定格子
   for(const key of order){
     const meta = CFG.labels[key];
     const count = (groups[key]||[]).length;
     const box = el('#'+idOf(key));
     if(!box) continue;
-    box.className = `cell cell-${meta.code}`; // 套用顏色樣式（A1/A2/B1...）
+    box.className = `cell cell-${meta.code}`;
     box.innerHTML = `<h4>${meta.code}｜${meta.title}</h4>
       <div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
     box.onclick = ()=>{ viewFilter = key; renderTable(); highlightFilter(); };
@@ -605,6 +573,9 @@ function render(){
 
   // 4) 表格
   renderTable();
+
+  // 5) 一次性生成 CSV 欄位說明
+  buildFieldGuide();
 }
 
 function highlightFilter(){
@@ -674,6 +645,69 @@ X999,黑名單測試,natural,0,1000000,1100000,20,500000,2,一般,1,300000,50000
 el('#btnDemo').onclick=()=>{ raw = csvParse(demoCSV); process(); };
 
 document.addEventListener('change', e=>{ if(e.target.id==='selEntity' || e.target.id==='selPage'){ renderTable(); }});
+
+// === 8) 生成 CSV 欄位說明（由 CFG.map 自動渲染） =============================
+function buildFieldGuide(){
+  const box = el('#fieldGuide');
+  const pre = el('#csvHeaderSample');
+  if(!box || !pre) return;
+  if(box.dataset.done === '1') return; // 只做一次
+  const m = CFG.map;
+
+  const rows = [];
+  // 必填
+  rows.push(['必填', m.id, '共通', '客戶 ID']);
+  rows.push(['必填', m.name, '共通', '客戶名稱']);
+  rows.push(['必填', m.entity, '共通', '客群型別（natural / corp；可填「自然人/法人」）']);
+  // 共通
+  rows.push(['共通', m.blacklist, '共通', '合規黑名單(1/0 或 true/false)']);
+  // 自然人
+  rows.push(['自然人', m.aum, '自然人', '投資 AUM（12M）']);
+  rows.push(['自然人', m.salary, '自然人', '年薪']);
+  rows.push(['自然人', m.degree, '自然人', '學歷(1~4)']);
+  rows.push(['自然人', m.vip, '自然人', 'VIP 等級']);
+  rows.push(['自然人', m.prodKinds, '自然人', '產品大類數(四線滲透)']);
+  rows.push(['自然人', m.depNow, '自然人', '近3月平均存款']);
+  rows.push(['自然人', m.depPrev, '自然人', '前3月平均存款']);
+  rows.push(['自然人', m.lastDays, '自然人', '最近交易距天數']);
+  rows.push(['自然人', m.nat_txn_amt_3m, '自然人', '交易金額(近3月)']);
+  rows.push(['自然人', m.nat_txn_amt_prev3m, '自然人', '交易金額(前3月)']);
+  rows.push(['自然人', m.nat_txn_cnt_3m, '自然人', '交易筆數(近3月)']);
+  rows.push(['自然人', m.nat_txn_cnt_prev3m, '自然人', '交易筆數(前3月)']);
+  rows.push(['自然人', m.nat_ebank_login_3m, '自然人', '網銀登入(近3月)']);
+  rows.push(['自然人', m.nat_card_active_3m, '自然人', '信用卡活躍(近3月)']);
+  rows.push(['自然人', m.loan_util, '自然人', '貸款動用率(0~1)']);
+  // 法人
+  rows.push(['法人', m.fxNow, '法人', '外匯量(近3月)']);
+  rows.push(['法人', m.fxPrev, '法人', '外匯量(前3月)']);
+  rows.push(['法人', m.capital, '法人', '資本額']);
+  rows.push(['法人', m.years, '法人', '成立年數']);
+  rows.push(['法人', m.rating, '法人', '信評(或 AAA~)']);
+  rows.push(['法人', m.diversity, '法人', '往來多樣性(大類數)']);
+  rows.push(['法人', m.corp_txn_amt_3m, '法人', '交易金額(近3月)']);
+  rows.push(['法人', m.corp_txn_amt_prev3m, '法人', '交易金額(前3月)']);
+  rows.push(['法人', m.netbank_txn, '法人', '網銀交易量']);
+  rows.push(['法人', m.corp_outflow_abnormal, '法人', '非常態轉出(1/0)']);
+  rows.push(['法人', m.corp_industry, '法人(可選)', '產業別']);
+  rows.push(['法人', m.corp_strategic, '法人(可選)', '策略性產業（高/中/低）']);
+
+  const table = document.createElement('table');
+  table.className = 'tbl';
+  table.innerHTML = `
+    <thead><tr>
+      <th>類別</th><th>CSV 標頭名稱</th><th>適用客群</th><th>說明</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(r=>`<tr><td>${r[0]}</td><td><code>${r[1]}</code></td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}
+    </tbody>`;
+  box.appendChild(table);
+
+  // 表頭範本（完整標籤集；順序可自由調整）
+  const headerLine = Object.values(m).join(',');
+  pre.textContent = headerLine;
+
+  box.dataset.done = '1';
+}
 
 // 初始渲染
 render();
