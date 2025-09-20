@@ -28,60 +28,59 @@
 
     /* ======= 4×4 矩陣版面（左列：推薦；上列：關注） ======= */
     :root{
-  --side-w: 120px;   /* 左側推薦欄位寬 */
-  --head-h: 60px;    /* 上方關注列高 */
-  --row-h: 120px;    /* 每個矩陣 cell 高度 */
-}
+      /* 可自行調整：左側推薦欄寬、上方標頭列高 */
+      --side-w: 120px;
+      --head-h: 56px;
 
-.matrix-wrapper{
-  display:grid;
-  grid-template-columns: var(--side-w) repeat(3,1fr);
-  grid-template-rows: var(--head-h) repeat(3,var(--row-h));
-  gap:0;
-  border:1px solid var(--grid-border);
-  border-radius:12px;
-  overflow:hidden;
-}
+      /* 可自行調整：每一欄寬（關注 低/中/高）*/
+      --col-w-L: 1fr;
+      --col-w-M: 1fr;
+      --col-w-H: 1fr;
 
-.matrix-header,
-.matrix-side{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:#e9eef7;
-  color:#000;
-  border-right:1px solid var(--grid-border);
-  border-bottom:1px solid var(--grid-border);
-  font-weight:700;
-}
+      /* 可自行調整：每一列高（推薦 高/中/低）*/
+      --row-h-H: 112px;
+      --row-h-M: 112px;
+      --row-h-L: 112px;
 
-.matrix-side{
-  background:#e9edf3;
-}
+      --grid-border:#2a355c;
+    }
 
-.matrix3{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-}
+    .matrix-wrapper{
+      display:grid;
+      grid-template-columns: var(--side-w) var(--col-w-L) var(--col-w-M) var(--col-w-H);
+      grid-template-rows: var(--head-h) var(--row-h-H) var(--row-h-M) var(--row-h-L);
+      border:1px solid var(--grid-border);
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+    }
 
-.cell{
-  border-right:1px solid var(--grid-border);
-  border-bottom:1px solid var(--grid-border);
-  padding:10px;
-  position:relative;
-}
-.cell h4{
-  margin:0 0 6px;
-  font-size:14px;
-  color:#000;
-}
+    /* 標頭格（上排三格 + 左上空白）*/
+    .matrix-header{
+      display:flex;align-items:center;justify-content:center;
+      background:#f5f7fa;color:#000;font-weight:700;
+      border-right:1px solid var(--grid-border);
+      border-bottom:1px solid var(--grid-border);
+    }
+    /* 左側推薦標籤（每列第一格）*/
+    .matrix-side{
+      display:flex;align-items:center;justify-content:center;
+      background:#f5f7fa;color:#000;font-weight:700;
+      border-right:1px solid var(--grid-border);
+      border-bottom:1px solid var(--grid-border);
+    }
 
-    /* 筆數膠囊：黑底白字 */
+    /* 內部九宮格 cell */
+    .cell{
+      border-right:1px solid var(--grid-border);
+      border-bottom:1px solid var(--grid-border);
+      padding:10px;position:relative;background:#fff;
+    }
+    .cell h4{margin:0 0 6px;font-size:14px;color:#000}
     .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
-    /* 阿拉伯數字黑色 */
     .num{font-size:22px;font-weight:700;color:#000}
 
-    /* === 九宮格顏色對應（依你提供的圖）=== */
+    /* === 九宮格顏色（依你提供）=== */
     .cell-A1 { background:#f57c00; } /* 高潛力開發（橘） */
     .cell-A2 { background:#fbc02d; } /* 高潛力監測（黃） */
     .cell-B1 { background:#f57c00; } /* 高潛力警示（橘） */
@@ -133,19 +132,29 @@
 
         <!-- 4×4 版面：第一列是關注標頭、第一欄是推薦標頭 -->
         <div class="matrix-wrapper">
+          <!-- 第1行：左上角空白 + 關注標頭 -->
           <div class="matrix-header"></div>
           <div class="matrix-header">關注低</div>
           <div class="matrix-header">關注中</div>
           <div class="matrix-header">關注高</div>
 
+          <!-- 第2行：推薦高 -->
           <div class="matrix-side">推薦高</div>
-          <div class="matrix3" id="matrix-row-high"></div>
+          <div class="cell" id="cell-HL"></div>
+          <div class="cell" id="cell-HM"></div>
+          <div class="cell" id="cell-HH"></div>
 
+          <!-- 第3行：推薦中 -->
           <div class="matrix-side">推薦中</div>
-          <div class="matrix3" id="matrix-row-mid"></div>
+          <div class="cell" id="cell-ML"></div>
+          <div class="cell" id="cell-MM"></div>
+          <div class="cell" id="cell-MH"></div>
 
+          <!-- 第4行：推薦低 -->
           <div class="matrix-side">推薦低</div>
-          <div class="matrix3" id="matrix-row-low"></div>
+          <div class="cell" id="cell-LL"></div>
+          <div class="cell" id="cell-LM"></div>
+          <div class="cell" id="cell-LH"></div>
         </div>
       </div>
 
@@ -567,32 +576,24 @@ function rescale(arr, v, [lo,hi]){
 function quantile(a, q){ const b=[...a].sort((x,y)=>x-y); const i=(b.length-1)*q; const l=Math.floor(i), r=Math.ceil(i); if(l===r) return b[l]; return b[l]*(r-i)+b[r]*(i-l); }
 
 function render(){
-  // 依九宮格 key 產生
+  // 1) 統計各格數量
   const groups = groupBy(enriched.filter(r=>!r.excluded), r=>r.cell);
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
+  const idOf = k => `cell-${k}`;
 
-  // 清空三列容器
-  el('#matrix-row-high').innerHTML='';
-  el('#matrix-row-mid').innerHTML='';
-  el('#matrix-row-low').innerHTML='';
-
+  // 2) 寫入固定格子（不 append，避免跑版）
   for(const key of order){
     const meta = CFG.labels[key];
     const count = (groups[key]||[]).length;
-    const div = document.createElement('div');
-    div.className = `cell cell-${meta.code}`;
-    div.innerHTML = `<h4>${meta.code}｜${meta.title}</h4>
+    const box = el('#'+idOf(key));
+    if(!box) continue;
+    box.className = `cell cell-${meta.code}`; // 套用顏色樣式（A1/A2/B1...）
+    box.innerHTML = `<h4>${meta.code}｜${meta.title}</h4>
       <div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
-    div.onclick = ()=>{ viewFilter = key; renderTable(); highlightFilter(); };
-
-    // 放到對應列（依推薦高/中/低）
-    const rowCode = key[0]; // H/M/L
-    if(rowCode==='H') el('#matrix-row-high').appendChild(div);
-    else if(rowCode==='M') el('#matrix-row-mid').appendChild(div);
-    else el('#matrix-row-low').appendChild(div);
+    box.onclick = ()=>{ viewFilter = key; renderTable(); highlightFilter(); };
   }
 
-  // 篩選 chips
+  // 3) 篩選 chips
   const f = el('#filters'); f.innerHTML='';
   const all = document.createElement('button'); all.className='btn'; all.textContent='顯示全部';
   all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();}; f.appendChild(all);
@@ -602,9 +603,8 @@ function render(){
   }
   highlightFilter();
 
-  // 表格 & 設定檢視
+  // 4) 表格
   renderTable();
-  const box = el('#cfgView'); if (box) box.textContent = JSON.stringify(CFG, null, 2);
 }
 
 function highlightFilter(){
