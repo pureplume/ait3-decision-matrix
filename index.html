@@ -3,60 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 潛力客智選導航｜決策矩陣 (Client‑Only)</title>
+  <title>AI 潛力客智選導航｜決策矩陣 (Client-Only)</title>
   <style>
     :root{
-      --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--ok:#2ecc71;--warn:#f1c40f;--risk:#e74c3c;--chip:#233055;
+      --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;
+      --grid-border:#2a355c;
     }
     html,body{height:100%;}
-    body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto;}
-    .wrap{max-width:1100px;margin:32px auto;padding:0 16px;}
-    .hero{display:flex;gap:20px;align-items:center;}
-    .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:var(--brand);padding:6px 10px;border-radius:999px;border:1px solid #1d2a4d}
+    body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    .hero{display:flex;gap:20px;align-items:center}
+    .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:#66e0ff;padding:6px 10px;border-radius:999px;border:1px solid #1d2a4d}
     h1{font-size:28px;margin:4px 0 8px}
     p.muted{color:var(--muted);margin:0}
-    .panel{background:var(--panel);border:1px solid #1b2340;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+    .panel{background:#11162a;border:1px solid #1b2340;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
     .grid{display:grid;gap:16px}
     .grid.cols-2{grid-template-columns:1fr 1fr}
-    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
     .btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;background:#1a2347;color:#e9efff;cursor:pointer}
     .btn:hover{filter:brightness(1.1)}
-    .btn.primary{background:linear-gradient(135deg,#1e6fff,#3cc7ff);color:#00122a}
     input[type=file]{display:none}
     label.file{display:inline-flex;gap:10px;align-items:center;background:#132142;border:1px dashed #2a3b6a;padding:12px 14px;border-radius:12px;cursor:pointer}
-    .kv{display:flex;gap:10px;align-items:center;}
+    .kv{display:flex;gap:10px;align-items:center}
     .kv .k{color:#98a8c6}
-    .matrix{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:96px;border:1px solid #2a355c;border-radius:12px;overflow:hidden}
-    .cell{border:1px solid #2a355c;padding:10px;position:relative}
-    .cell h4{margin:0 0 6px;font-size:14px;color:#000000}
-    .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600}
-    .pill.ok{background:#000000;color:#ffffff;border:1px solid #000000}
-    .pill.warn{background:#000000;color:#ffffff;border:1px solid #000000}
-    .pill.risk{background:#000000;color:#ffffff;border:1px solid #000000}
-    .num{font-size:22px;font-weight:700;color:#000000}
+
+    /* ======= 4×4 矩陣版面（左列：推薦；上列：關注） ======= */
+    .matrix-wrapper{
+      display:grid;
+      grid-template-columns:120px repeat(3,1fr);
+      grid-template-rows:60px repeat(3,1fr);
+      gap:0;
+      border:1px solid var(--grid-border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+    .matrix-header,.matrix-side{
+      display:flex;align-items:center;justify-content:center;
+      background:#e9eef7;color:#000;border-right:1px solid var(--grid-border);border-bottom:1px solid var(--grid-border);
+      font-weight:700;
+    }
+    .matrix-side{background:#e9edf3}
+
+    .matrix3{display:grid;grid-template-columns:repeat(3,1fr)}
+    .cell{border-right:1px solid var(--grid-border);border-bottom:1px solid var(--grid-border);padding:10px;position:relative}
+    .cell h4{margin:0 0 6px;font-size:14px;color:#000}
+
+    /* 筆數膠囊：黑底白字 */
+    .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
+    /* 阿拉伯數字黑色 */
+    .num{font-size:22px;font-weight:700;color:#000}
+
+    /* === 九宮格顏色對應（依你提供的圖）=== */
+    .cell-A1 { background:#f57c00; } /* 高潛力開發（橘） */
+    .cell-A2 { background:#fbc02d; } /* 高潛力監測（黃） */
+    .cell-B1 { background:#f57c00; } /* 高潛力警示（橘） */
+    .cell-C1 { background:#fff176; } /* 中潛力維護（淡黃） */
+    .cell-C2 { background:#fff176; } /* 中潛力監測（淡黃） */
+    .cell-B2 { background:#fbc02d; } /* 中潛力警示（黃） */
+    .cell-C3 { background:#fff176; } /* 低潛力維護（淡黃） */
+    .cell-C4 { background:#fff176; } /* 低潛力監測（淡黃） */
+    .cell-Z  { background:#ffffff; } /* 合規排除（白底） */
+
+    /* 表格/其他 */
     .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
     .tbl th,.tbl td{border-bottom:1px solid #233055;padding:8px 10px;text-align:left}
     .tbl th{background:#0f1733;color:#a9b9db;position:sticky;top:0}
     .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .chip{background:var(--chip);border:1px solid #233055;padding:4px 8px;border-radius:999px}
-    .code{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0f1430;padding:10px;border-radius:8px;border:1px solid #1c2550}
+    .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0f1430;padding:10px;border-radius:8px;border:1px solid #1c2550}
     footer{opacity:.7;margin:24px 0 40px}
     .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
     .right{margin-left:auto}
     .notice{background:#0f1430;border:1px solid #22306b;padding:10px 12px;border-radius:10px}
-    /* === 九宮格顏色對應 === */
-   .cell-A1 { background:#f57c00; } /* 高潛力開發 */
-   .cell-A2 { background:#fbc02d; } /* 高潛力監測 */
-   .cell-B1 { background:#f57c00; } /* 高潛力警示 */
-
-   .cell-C1 { background:#fff176; } /* 中潛力維護 */
-   .cell-C2 { background:#fff176; } /* 中潛力監測 */
-   .cell-B2 { background:#fbc02d; } /* 中潛力警示 */
-
-   .cell-C3 { background:#fff176; } /* 低潛力維護 */
-   .cell-C4 { background:#fff176; } /* 低潛力監測 */
-   .cell-Z  { background:#ffffff; } /* 合規排除 */
-
   </style>
 </head>
 <body>
@@ -71,7 +87,7 @@
 
     <div class="panel" id="uploader">
       <div class="row">
-        <label class="file" for="csvInput">📄 匯入 CSV（UTF‑8）</label>
+        <label class="file" for="csvInput">📄 匯入 CSV（UTF-8）</label>
         <input id="csvInput" type="file" accept=".csv" />
         <button class="btn" id="btnDemo">載入示範資料</button>
         <button class="btn" id="btnClear">清空</button>
@@ -85,8 +101,25 @@
     <div class="grid cols-2" style="margin-top:16px">
       <div class="panel">
         <div class="row"><h3 style="margin:0">九宮格決策摘要</h3><button class="btn right" id="btnDownload">匯出結果 CSV</button></div>
-        <div class="matrix" id="matrix"></div>
+
+        <!-- 4×4 版面：第一列是關注標頭、第一欄是推薦標頭 -->
+        <div class="matrix-wrapper">
+          <div class="matrix-header"></div>
+          <div class="matrix-header">關注低</div>
+          <div class="matrix-header">關注中</div>
+          <div class="matrix-header">關注高</div>
+
+          <div class="matrix-side">推薦高</div>
+          <div class="matrix3" id="matrix-row-high"></div>
+
+          <div class="matrix-side">推薦中</div>
+          <div class="matrix3" id="matrix-row-mid"></div>
+
+          <div class="matrix-side">推薦低</div>
+          <div class="matrix3" id="matrix-row-low"></div>
+        </div>
       </div>
+
       <div class="panel">
         <h3 style="margin:0 0 8px">篩選</h3>
         <div class="chips" id="filters"></div>
@@ -114,7 +147,12 @@
       </div>
     </div>
 
-    <footer>© 2025 AIT3 Demo • Client‑Only • 無資料上傳</footer>
+    <div class="panel" style="margin-top:16px">
+      <h3 style="margin:0 0 8px">欄位對應 / 規則設定（可依公司資料調整）</h3>
+      <pre class="code" id="cfgView"></pre>
+    </div>
+
+    <footer>© 2025 AIT3 Demo • Client-Only • 無資料上傳</footer>
   </div>
 
 <script>
@@ -122,62 +160,141 @@
 const CFG = {
   // 九宮格切點（>=hi 為高，>=mid 為中，否則低）
   cut: { R: {hi: 70, mid: 40}, A: {hi: 70, mid: 40} },
+
   // 九宮格標籤（依 R×A 區間）
   labels: {
-    HL: { code: 'A1', title: '高潛力開發', tone:'ok'   },   // 推薦高 × 關注低
-    HM: { code: 'A2', title: '高潛力監測', tone:'warn' },   // 推薦高 × 關注中
-    HH: { code: 'B1', title: '高潛力警示', tone:'risk' },   // 推薦高 × 關注高
-    ML: { code: 'C1', title: '中潛力維護', tone:'ok'   },   // 推薦中 × 關注低
-    MM: { code: 'C2', title: '中潛力監測', tone:'warn' },   // 推薦中 × 關注中
-    MH: { code: 'B2', title: '中潛力警示', tone:'risk' },   // 推薦中 × 關注高
-    LL: { code: 'C3', title: '低潛力維護', tone:'ok'   },   // 推薦低 × 關注低
-    LM: { code: 'C4', title: '低潛力監測', tone:'warn' },   // 推薦低 × 關注中
-    LH: { code: 'Z',  title: '合規排除',   tone:'risk' }    // 推薦低 × 關注高
+    HL: { code: 'A1', title: '高潛力開發', tone:'ok'   }, // 推薦高 × 關注低
+    HM: { code: 'A2', title: '高潛力監測', tone:'warn' }, // 推薦高 × 關注中
+    HH: { code: 'B1', title: '高潛力警示', tone:'risk' }, // 推薦高 × 關注高
+    ML: { code: 'C1', title: '中潛力維護', tone:'ok'   }, // 推薦中 × 關注低
+    MM: { code: 'C2', title: '中潛力監測', tone:'warn' }, // 推薦中 × 關注中
+    MH: { code: 'B2', title: '中潛力警示', tone:'risk' }, // 推薦中 × 關注高
+    LL: { code: 'C3', title: '低潛力維護', tone:'ok'   }, // 推薦低 × 關注低
+    LM: { code: 'C4', title: '低潛力監測', tone:'warn' }, // 推薦低 × 關注中
+    LH: { code: 'Z',  title: '合規排除',   tone:'risk' }  // 推薦低 × 關注高
   },
-  // 欄位對應（公司 CSV 標題 → 內部代碼）。示範資料請參見下方 demoCSV。
+
+  // === 欄位對應（公司 CSV 標題 → 內部代碼）====================================
   map: {
-    id: 'id',
-    name: 'name',
-    // 自然人常用欄位
-    aum: 'aum_12m',
-    depNow: 'avg_dep_3m',
-    depPrev: 'avg_dep_prev3m',
-    lastDays: 'last_txn_days',
-    salary: 'salary',
-    degree: 'degree',   // 學歷：高中=1, 大學=2, 研究所=3, 博士=4
-    vip: 'vip_tier',    // 一般/VIP/VVIP/高資產
-    prodKinds: 'prod_kinds', // 產品大類數（四線滲透）
+    id: 'id',                // [共通] 客戶ID
+    name: 'name',            // [共通] 客戶名稱
+    entity: 'entity',        // [共通] 客群類型（natural/corp）
+    blacklist: 'compliance_blacklist', // [共通] 合規黑名單 1/0 或 true/false
 
-    // 法人欄位
-    fxNow: 'fx_3m',
-    fxPrev: 'fx_prev3m',
-    capital: 'capital',
-    years: 'company_age_years',
-    rating: 'credit_rating', // 1(最好)~10(最差) 或 AAA/A/… → 會自動轉
-    diversity: 'biz_diversity', // 往來大類數
+    // === 自然人戶：客戶背景(靜態) ===
+    aum: 'aum_12m',          // 投資AUM（近12月）
+    salary: 'salary',        // 年薪
+    degree: 'degree',        // 學歷：1~4
+    vip: 'vip_tier',         // VIP 等級：一般/VIP/VVIP/高資產
+    prodKinds: 'prod_kinds', // 四線滲透（產品大類數）
+    // 可選擴充（B 模組若有）
+    nat_age: 'age',               // 年齡（可選）
+    nat_job: 'occupation',        // 職業（可選）
+    nat_segment: 'crm_segment',   // CRM分群（可選）
 
-    // 共通
-    blacklist: 'compliance_blacklist', // 1/0 或 true/false
-    entity: 'entity' // natural/corp（若沒有此欄會自動判斷）
+    // === 自然人戶：行為監測(動態) ===
+    depNow: 'avg_dep_3m',       // 最近三月平均存款
+    depPrev: 'avg_dep_prev3m',  // 前三月平均存款
+    lastDays: 'last_txn_days',  // 最近交易距今天數
+    nat_txn_amt_3m: 'txn_amt_3m',          // 交易金額(近3月)
+    nat_txn_amt_prev3m: 'txn_amt_prev3m',  // 交易金額(前3月)
+    nat_txn_cnt_3m: 'txn_cnt_3m',          // 交易筆數(近3月)
+    nat_txn_cnt_prev3m: 'txn_cnt_prev3m',  // 交易筆數(前3月)
+    nat_ebank_login_3m: 'ebank_login_3m',  // 網銀/行銀登入(近3月)
+    nat_card_active_3m: 'card_active_3m',  // 信用卡活躍(近3月)
+    loan_util: 'loan_util',                // 貸款動用率(0~1)
+
+    // === 法人戶：客戶背景(靜態) ===
+    capital: 'capital',                // 資本額
+    years: 'company_age_years',        // 成立年數
+    rating: 'credit_rating',           // 信評（1~10 或 AAA~）
+    diversity: 'biz_diversity',        // 往來多樣性（產品/業務大類數）
+    corp_industry: 'industry',         // 產業別（可選）
+    corp_strategic: 'strategic_level', // 策略性產業等級 高/中/低（可選）
+
+    // === 法人戶：行為監測(動態) ===
+    fxNow: 'fx_3m',                    // 外匯量(近3月)
+    fxPrev: 'fx_prev3m',               // 外匯量(前3月)
+    corp_txn_amt_3m: 'corp_txn_amt_3m',        // 交易金額(近3月)（可選）
+    corp_txn_amt_prev3m: 'corp_txn_amt_prev3m',// 交易金額(前3月)（可選）
+    netbank_txn: 'netbank_txn',                // 網銀交易量（可供 R 或營收）
+    corp_outflow_abnormal: 'corp_outflow_abnormal' // 非常態轉出旗標（A）
   },
-  // 權重（0~100，最後會正規化到 0~100）
+
+  // === 權重（0~100；B 模組對應每一項皆有中文註解，改數字即可）=================
   weight: {
+    // === 自然人 ===
     natural: {
-      R: { depGrowth: 30, aum: 30, vip: 15, degree: 10, salary: 10, prod: 5 },
-      A: { depDrop: 45, inactive: 35, riskFlag: 20 },
-      white: { // 白地：四線滲透低 且 存款正成長 → 推薦加成
-        prodMax: 1, prodLow: 1, boost: 10
-      }
+      R: {
+        // [B-自然人/行為監測] 存款成長率（近3月 vs 前3月）
+        depGrowth: 30,
+        // [B-自然人/客戶背景] AUM 規模
+        aum: 30,
+        // [B-自然人/客戶背景] VIP 等級
+        vip: 15,
+        // [B-自然人/客戶背景] 學歷
+        degree: 10,
+        // [B-自然人/客戶背景] 年薪
+        salary: 10,
+        // [B-自然人/滲透度] 產品大類數（四線滲透）
+        prod: 5,
+        // [B-自然人/行為監測] 交易金額成長（可依表上權重填值）
+        txnAmtGrowth: 0,
+        // [B-自然人/行為監測] 交易筆數成長（可依表上權重填值）
+        txnCntGrowth: 0,
+        // [B-自然人/行為監測] 貸款動用率（可依表上權重填值）
+        loanUtil: 0
+      },
+      A: {
+        // [B-自然人/行為監測] 存款下降（負向）
+        depDrop: 45,
+        // [B-自然人/行為監測] 不活躍（最近交易距今）
+        inactive: 35,
+        // [B-合規排除/黑名單] 風險旗標
+        riskFlag: 20,
+        // [B-自然人/數位行為] 網銀長期未登入（可依表上權重填值）
+        ebankDormant: 0,
+        // [B-自然人/信用卡] 卡片不活躍（可依表上權重填值）
+        cardDormant: 0
+      },
+      // 白地：四線滲透低 + 存款正成長 → 推薦加成
+      white: { prodMax: 1, prodLow: 1, boost: 10 }
     },
+
+    // === 法人 ===
     corp: {
-      R: { depGrowth: 25, fxGrowth: 25, capital: 15, years: 10, rating: 15, diversity: 10 },
-      A: { depDrop: 50, /* 可視需要再加：異常轉出等 */ },
-      white: { // 白地：多樣性低 + 存款/外匯成長 → 推薦加成
-        diversityMax: 2, boostEach: 5 // deposit/FX 各 +5 上限 +10
-      }
+      R: {
+        // [B-法人/行為監測] 存款成長率（近3月 vs 前3月）
+        depGrowth: 25,
+        // [B-法人/行為監測] 外匯量成長
+        fxGrowth: 25,
+        // [B-法人/客戶背景] 資本額
+        capital: 15,
+        // [B-法人/客戶背景] 成立年數
+        years: 10,
+        // [B-法人/客戶背景] 信評
+        rating: 15,
+        // [B-法人/往來多樣性] 產品/業務大類數
+        diversity: 10,
+        // [B-法人/行為監測] 交易金額成長（可依表上權重填值）
+        corpTxnAmtGrowth: 0,
+        // [B-法人/策略性產業] 高/中/低（可依表上權重填值）
+        strategic: 0,
+        // [B-法人/數位行為] 網銀使用量（可依表上權重填值）
+        netbankUse: 0
+      },
+      A: {
+        // [B-法人/行為監測] 存款下降（負向）
+        depDrop: 50,
+        // [B-法人/異常交易] 非常態轉出旗標（可依表上權重填值）
+        outflowAbnormal: 0
+      },
+      // 白地：多樣性低 + 存款/外匯成長 → 推薦加成
+      white: { diversityMax: 2, boostEach: 5 }
     }
   },
-  // 模擬貢獻金額（選用）。若不需要可設為 false。
+
+  // 模擬貢獻金額（選用）
   revenue: {
     enable: true,
     range: [100000, 10000000], // 10萬～1000萬
@@ -199,7 +316,9 @@ const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 const pct = x => clamp(Math.round(x*100),0,100);
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const asNum = v => v===''||v==null? NaN : (typeof v==='number'?v:Number(v.toString().replace(/[,\s]/g,'')));
-const ratingToScore = v => { // 企業評等：分數越好 R 越高
+
+// 企業評等轉分數：分數越好 R 越高
+const ratingToScore = v => {
   if (v==null) return 50; const s = String(v).toUpperCase();
   if (/^(AAA|AA\+?)$/.test(s)) return 95;
   if (/^(AA-|A\+)$/.test(s)) return 85;
@@ -208,6 +327,14 @@ const ratingToScore = v => { // 企業評等：分數越好 R 越高
   return 60;
 };
 const tierToScore = v => ({'一般':50,'VIP':75,'VVIP':90,'高資產':85}[String(v)] ?? 50);
+
+// 成長率 → 0~1，把 [-cap,+cap] 線性映射到 [0,1]
+const growth01 = (now, prev, capAbs = 0.4) => {
+  const n = asNum(now), p = asNum(prev);
+  if (!isNum(n) || !isNum(p) || p<=0) return 0;
+  const g = clamp((n-p)/p, -capAbs, capAbs);
+  return (g + capAbs) / (2*capAbs);
+};
 
 function csvParse(text){
   // 極簡 CSV 解析（支援雙引號與逗號）
@@ -252,70 +379,100 @@ function whiteBoostCorp(rec){
 }
 
 // === 3) 核心計分 ==============================================================
+// 自然人：R（正向）、A（負向）
 function scoreNatural(rec){
   const m=CFG.map, w=CFG.weight.natural;
-  // 推薦 R （正向）
-  const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
-  const depG = (isNum(depNow)&&isNum(depPrev)&&depPrev>0)? (depNow-depPrev)/depPrev : 0; // 成長率
-  const aum = asNum(rec[m.aum]);
-  const vipS = tierToScore(rec[m.vip]);
-  const degS = clamp((asNum(rec[m.degree])||0)*25, 0, 100); // 1~4 → 25~100
-  const sal = asNum(rec[m.salary]);
-  const prod = asNum(rec[m.prodKinds]);
 
-  let R = 0;
-  R += w.R.depGrowth * clamp((depG+0.2)/0.4, 0, 1); // -20%~+20% → 0~1
-  R += w.R.aum * clamp((aum||0)/1e8, 0, 1);         // 0~1億 正規化
-  R += w.R.vip * (vipS/100);
-  R += w.R.degree * (degS/100);
-  R += w.R.salary * clamp((sal||0)/2e6, 0, 1);      // 年薪 0~200萬
-  R += w.R.prod * clamp((prod||0)/4, 0, 1);         // 四線滲透 0~4
+  // ---- R 指標（對應 B 模組）----
+  const R_depGrowth = growth01(rec[m.depNow], rec[m.depPrev], 0.4);           // 存款成長率
+  const R_aum = clamp((asNum(rec[m.aum])||0)/1e8, 0, 1);                      // AUM 規模(0~1億)
+  const R_vip = tierToScore(rec[m.vip])/100;                                   // VIP 等級
+  const R_degree = clamp((asNum(rec[m.degree])||0)*0.25, 0, 1);               // 學歷 1~4 → 0~1
+  const R_salary = clamp((asNum(rec[m.salary])||0)/2e6, 0, 1);                // 年薪 0~200萬
+  const R_prod = clamp((asNum(rec[m.prodKinds])||0)/4, 0, 1);                  // 四線滲透 0~4
+  const R_txnAmtGrowth = growth01(rec[m.nat_txn_amt_3m], rec[m.nat_txn_amt_prev3m], 0.6); // 交易金額成長
+  const R_txnCntGrowth = growth01(rec[m.nat_txn_cnt_3m], rec[m.nat_txn_cnt_prev3m], 0.6); // 交易筆數成長
+  const R_loanUtil = clamp((asNum(rec[m.loan_util])||0), 0, 1);               // 貸款動用率
 
-  // 關注 A（負向）
-  const last = asNum(rec[m.lastDays]);
-  let A = 0;
-  const depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0; // 0~-30%
-  A += w.A.depDrop * depDrop;
-  A += w.A.inactive * clamp((last-90)/180, 0, 1); // 超過 90 天未交易 → 最高 180 天
-  A += w.A.riskFlag * (String(rec[m.blacklist]).match(/^(1|true|Y)$/i)? 1 : 0);
+  let R=0;
+  R += w.R.depGrowth     * R_depGrowth;
+  R += w.R.aum           * R_aum;
+  R += w.R.vip           * R_vip;
+  R += w.R.degree        * R_degree;
+  R += w.R.salary        * R_salary;
+  R += w.R.prod          * R_prod;
+  R += w.R.txnAmtGrowth  * R_txnAmtGrowth;
+  R += w.R.txnCntGrowth  * R_txnCntGrowth;
+  R += w.R.loanUtil      * R_loanUtil;
 
-  // 白地加權（正向加成，僅加到 R）
+  // ---- A 指標（對應 B 模組）----
+  const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
+  const depG = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+  const A_depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;                 // 存款下降
+  const A_inactive = clamp((asNum(rec[m.lastDays])-90)/180, 0, 1);            // 不活躍（>90天）
+  const A_risk = /^(1|true|Y)$/i.test(String(rec[m.blacklist]||''))? 1 : 0;   // 風險旗標
+  const ebLogin = asNum(rec[m.nat_ebank_login_3m]);                            // 網銀不活躍
+  const A_ebDormant = isNum(ebLogin)? clamp(1 - ebLogin/6, 0, 1):0;
+  const cardAct = asNum(rec[m.nat_card_active_3m]);                            // 卡片不活躍
+  const A_cardDormant = isNum(cardAct)? clamp(1 - cardAct/3, 0, 1):0;
+
+  let A=0;
+  A += w.A.depDrop       * A_depDrop;
+  A += w.A.inactive      * A_inactive;
+  A += w.A.riskFlag      * A_risk;
+  A += w.A.ebankDormant  * A_ebDormant;
+  A += w.A.cardDormant   * A_cardDormant;
+
+  // 白地正向加成（僅加 R）
   R += whiteBoostNatural(rec);
 
-  // 正規化到 0~100
-  const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + CFG.weight.natural.white.boost));
-  const A100 = pct(A/ (Object.values(w.A).reduce((a,b)=>a+b,0)));
-
+  const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + w.white.boost || 1));
+  const A100 = pct(A/ (Object.values(w.A).reduce((a,b)=>a+b,0) || 1));
   return {R:R100, A:A100};
 }
 
+// 法人：R（正向）、A（負向）
 function scoreCorp(rec){
   const m=CFG.map, w=CFG.weight.corp;
-  const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
-  const fxNow=asNum(rec[m.fxNow]); const fxPrev=asNum(rec[m.fxPrev]);
-  const cap = asNum(rec[m.capital]);
-  const yrs = asNum(rec[m.years]);
-  const rat = ratingToScore(rec[m.rating]);
-  const div = asNum(rec[m.diversity]);
 
+  // ---- R 指標（對應 B 模組）----
+  const R_depGrowth = growth01(rec[m.depNow], rec[m.depPrev], 0.4);           // 存款成長
+  const R_fxGrowth = growth01(rec[m.fxNow], rec[m.fxPrev], 0.6);              // 外匯成長
+  const R_capital = clamp((asNum(rec[m.capital])||0)/5e8, 0, 1);              // 資本額 0~5億
+  const R_years = clamp((asNum(rec[m.years])||0)/30, 0, 1);                   // 成立年數 0~30
+  const R_rating = ratingToScore(rec[m.rating])/100;                           // 信評
+  const R_diversity = clamp((asNum(rec[m.diversity])||0)/6, 0, 1);            // 多樣性 0~6
+  const R_corpTxnAmtGrowth = growth01(rec[m.corp_txn_amt_3m], rec[m.corp_txn_amt_prev3m], 0.6); // 交易金額成長
+  const strat = String(rec[m.corp_strategic]||'').trim();                      // 策略性產業
+  const R_strategic = strat==='高'?1: strat==='中'?0.5: 0;
+  const R_netbankUse = clamp((asNum(rec[m.netbank_txn])||0)/20, 0, 1);        // 網銀使用量
+
+  let R=0;
+  R += w.R.depGrowth        * R_depGrowth;
+  R += w.R.fxGrowth         * R_fxGrowth;
+  R += w.R.capital          * R_capital;
+  R += w.R.years            * R_years;
+  R += w.R.rating           * R_rating;
+  R += w.R.diversity        * R_diversity;
+  R += w.R.corpTxnAmtGrowth * R_corpTxnAmtGrowth;
+  R += w.R.strategic        * R_strategic;
+  R += w.R.netbankUse       * R_netbankUse;
+
+  // ---- A 指標（對應 B 模組）----
+  const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
   const depG = isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
-  const fxG  = isNum(fxNow)&&isNum(fxPrev)&&fxPrev>0? (fxNow-fxPrev)/fxPrev : 0;
+  const A_depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;                  // 存款下降
+  const A_outflowAbn = /^(1|true|Y)$/i.test(String(rec[m.corp_outflow_abnormal]||''))? 1 : 0; // 異常轉出
 
-  let R = 0; let A = 0;
-  R += w.R.depGrowth * clamp((depG+0.2)/0.4, 0, 1);
-  R += w.R.fxGrowth  * clamp((fxG+0.2)/0.4, 0, 1);
-  R += w.R.capital   * clamp(cap/5e8, 0, 1);   // 資本額 0~5億
-  R += w.R.years     * clamp((yrs||0)/30, 0, 1); // 0~30 年
-  R += w.R.rating    * (rat/100);
-  R += w.R.diversity * clamp((div||0)/6, 0, 1);
+  let A=0;
+  A += (w.A.depDrop||0) * A_depDrop;
+  A += (w.A.outflowAbnormal||0) * A_outflowAbn;
 
-  const depDrop = depG<0? Math.min(Math.abs(depG)/0.3,1):0;
-  A += (w.A.depDrop||0) * depDrop;
-
+  // 白地正向加成（僅加 R）
   R += whiteBoostCorp(rec);
 
-  const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + 10));
-  const A100 = pct(A/ (Object.values(w.A).reduce((a,b)=>a+b,0)||100));
+  const R100 = pct(R/ (Object.values(w.R).reduce((a,b)=>a+b,0) + 10 || 1));
+  const A100 = pct(A/ (Object.values(w.A).reduce((a,b)=>a+b,0) || 1));
   return {R:R100, A:A100};
 }
 
@@ -330,13 +487,12 @@ function computeRevenue(rec, entity, R, A){
   const cfg=CFG.revenue; if(!cfg?.enable) return null;
   if(entity==='corp'){
     const m=CFG.map, p=cfg.corp;
-    const base = (asNum(rec[m.depNow])||0)*p.NIM + (asNum(rec[m.fxNow])||0)*p.FX_SPREAD*4 + (asNum(rec['netbank_txn']||0)||0)*p.NETBANK_FEE*4;
+    const base = (asNum(rec[m.depNow])||0)*p.NIM + (asNum(rec[m.fxNow])||0)*p.FX_SPREAD*4 + (asNum(rec[m.netbank_txn])||0)*p.NETBANK_FEE*4;
     const factor = clamp(1 + p.R_WEIGHT*(R/100) - p.A_WEIGHT*(A/100), p.FACTOR_MIN, p.FACTOR_MAX);
-    const rev = base * factor;
-    return rev;
+    return base * factor;
   } else {
     const m=CFG.map, p=cfg.nat;
-    const base = (asNum(rec[m.depNow])||0)*p.NIM + (asNum(rec[m.aum])||0)*p.FEE_INV + (asNum(rec['txn_amt_3m']||0)||0)*p.FEE_TRANS*12 + (asNum(rec['loan_util']||0)||0)*(asNum(rec[m.depNow])||0)*p.LOAN_SPREAD;
+    const base = (asNum(rec[m.depNow])||0)*p.NIM + (asNum(rec[m.aum])||0)*p.FEE_INV + (asNum(rec[m.nat_txn_amt_3m])||0)*p.FEE_TRANS*12 + (asNum(rec[m.loan_util])||0)*(asNum(rec[m.depNow])||0)*p.LOAN_SPREAD;
     const vip = p.vipUplift[String(rec[m.vip])]||1;
     const factor = clamp(1 + p.R_WEIGHT*(R/100) - p.A_WEIGHT*(A/100), p.FACTOR_MIN, p.FACTOR_MAX);
     return base * factor * vip;
@@ -352,7 +508,6 @@ function inferEntity(rec){
   if(corpHints.some(h=>rec[h]!=null && rec[h]!=='')) return 'corp';
   return 'natural';
 }
-
 function isExcluded(rec){
   const v = String(rec[CFG.map.blacklist]||'').trim();
   return /^(1|true|Y)$/i.test(v);
@@ -388,41 +543,56 @@ function rescale(arr, v, [lo,hi]){
 function quantile(a, q){ const b=[...a].sort((x,y)=>x-y); const i=(b.length-1)*q; const l=Math.floor(i), r=Math.ceil(i); if(l===r) return b[l]; return b[l]*(r-i)+b[r]*(i-l); }
 
 function render(){
-  // 九宮格
+  // 依九宮格 key 產生
   const groups = groupBy(enriched.filter(r=>!r.excluded), r=>r.cell);
-  const m = el('#matrix');
-  m.innerHTML='';
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
+
+  // 清空三列容器
+  el('#matrix-row-high').innerHTML='';
+  el('#matrix-row-mid').innerHTML='';
+  el('#matrix-row-low').innerHTML='';
+
   for(const key of order){
     const meta = CFG.labels[key];
     const count = (groups[key]||[]).length;
-    const pill = meta.tone==='ok'?'ok': meta.tone==='warn'?'warn': meta.tone==='risk'?'risk':'';
-    const div = document.createElement('div'); 
+    const div = document.createElement('div');
     div.className = `cell cell-${meta.code}`;
     div.innerHTML = `<h4>${meta.code}｜${meta.title}</h4>
-      <div class="row"><span class="pill ${pill}">筆數</span> <span class="num">${fmt(count)}</span></div>`;
+      <div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
     div.onclick = ()=>{ viewFilter = key; renderTable(); highlightFilter(); };
-    m.appendChild(div);
+
+    // 放到對應列（依推薦高/中/低）
+    const rowCode = key[0]; // H/M/L
+    if(rowCode==='H') el('#matrix-row-high').appendChild(div);
+    else if(rowCode==='M') el('#matrix-row-mid').appendChild(div);
+    else el('#matrix-row-low').appendChild(div);
   }
+
   // 篩選 chips
   const f = el('#filters'); f.innerHTML='';
-  const all = document.createElement('button'); all.className='btn'; all.textContent='顯示全部'; all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();}; f.appendChild(all);
-  for(const key of order){ const b=document.createElement('button'); b.className='btn'; b.textContent=`${CFG.labels[key].code}`; b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();}; f.appendChild(b); }
+  const all = document.createElement('button'); all.className='btn'; all.textContent='顯示全部';
+  all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();}; f.appendChild(all);
+  for(const key of order){
+    const b=document.createElement('button'); b.className='btn'; b.textContent=`${CFG.labels[key].code}`;
+    b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();}; f.appendChild(b);
+  }
   highlightFilter();
-  // 表格
-  renderTable();
 
+  // 表格 & 設定檢視
+  renderTable();
+  el('#cfgView').textContent = JSON.stringify(CFG, null, 2);
 }
 
 function highlightFilter(){
-  [...document.querySelectorAll('#filters .btn')].forEach(b=>b.style.outline='none');
-  const idx = ['ALL','HH','HM','HL','MH','MM','ML','LH','LM','LL'].indexOf(viewFilter);
-  if(idx>=0){ document.querySelectorAll('#filters .btn')[idx].style.outline='2px solid var(--brand)'; }
+  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
+  const btns=[...document.querySelectorAll('#filters .btn')];
+  btns.forEach(b=>b.style.outline='none');
+  const idx = ['ALL',...order].indexOf(viewFilter);
+  if(idx>=0 && btns[idx]) btns[idx].style.outline='2px solid var(--brand)';
 }
 
 function renderTable(){
   const tbl=el('#resultTbl');
-  const cols=['id','name','entity','R','A','cell','revenue'];
   const headers=['ID','名稱','客群','R(推薦)','A(關注)','矩陣','模擬貢獻'];
   const rows = enriched.filter(r=>!r.excluded && (viewFilter==='ALL'||r.cell===viewFilter));
   const limit = el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
@@ -430,7 +600,8 @@ function renderTable(){
   const body = document.createElement('tbody');
   for(const r of rows.slice(0,limit)){
     const tr=document.createElement('tr');
-    const values=[r[CFG.map.id], r[CFG.map.name], r.entity==='corp'?'法人':'自然人', r.R, r.A, `${CFG.labels[r.cell].code}｜${CFG.labels[r.cell].title}`, r.revenue? fmt(Math.round(r.revenue)) : '' ];
+    const values=[r[CFG.map.id], r[CFG.map.name], r.entity==='corp'?'法人':'自然人',
+      r.R, r.A, `${CFG.labels[r.cell].code}｜${CFG.labels[r.cell].title}`, r.revenue? fmt(Math.round(r.revenue)) : '' ];
     tr.innerHTML = values.map((v,i)=>`<td>${i===3||i===4? (v+'%'): v??''}</td>`).join('');
     body.appendChild(tr);
   }
@@ -450,7 +621,6 @@ function toCSV(arr){
   ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
   return [hdr, ...lines].join('\n');
 }
-
 el('#btnDownload').onclick=()=>{
   const csv = toCSV(enriched);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
@@ -466,15 +636,16 @@ el('#csvInput').addEventListener('change', async(e)=>{
 
 el('#btnClear').onclick=()=>{ raw=[]; enriched=[]; render(); el('#csvInput').value=''; };
 
-// === 7) 示範資料（可刪） =======================================================
-const demoCSV = `id,name,entity,${CFG.map.aum},${CFG.map.depNow},${CFG.map.depPrev},${CFG.map.lastDays},${CFG.map.salary},${CFG.map.degree},${CFG.map.vip},${CFG.map.prodKinds},${CFG.map.fxNow},${CFG.map.fxPrev},${CFG.map.capital},${CFG.map.years},${CFG.map.rating},${CFG.map.diversity},${CFG.map.blacklist}
-N001,王小智,natural,52000000,1800000,1500000,30,1600000,3,VIP,3,,,,,,0
-N002,林學成,natural,8000000,200000,260000,210,780000,2,一般,1,,,,,,0
-N003,張博士,natural,120000000,4500000,3700000,10,3200000,4,VVIP,4,,,,,,0
-C101,宏泰實業,corp,,12000000,9000000,, , , , ,38000000,26000000,800000000,18,A,3,0
-C102,景勝科技,corp,,2200000,2600000,, , , , ,9000000,6000000,200000000,32,AA,2,0
-C103,大鼎股份,corp,,1200000,1800000,, , , , ,1200000,3000000,50000000,6,BBB,1,0
-X999,黑名單測試,natural,0,1000000,1100000,20,500000,2,一般,1,,,,,,1`;
+// === 7) 示範資料（涵蓋 B 模組新增欄位，可直接測） ==============================
+const demoCSV =
+`id,name,entity,${CFG.map.aum},${CFG.map.depNow},${CFG.map.depPrev},${CFG.map.lastDays},${CFG.map.salary},${CFG.map.degree},${CFG.map.vip},${CFG.map.prodKinds},${CFG.map.nat_txn_amt_3m},${CFG.map.nat_txn_amt_prev3m},${CFG.map.nat_txn_cnt_3m},${CFG.map.nat_txn_cnt_prev3m},${CFG.map.nat_ebank_login_3m},${CFG.map.nat_card_active_3m},${CFG.map.loan_util},${CFG.map.fxNow},${CFG.map.fxPrev},${CFG.map.capital},${CFG.map.years},${CFG.map.rating},${CFG.map.diversity},${CFG.map.netbank_txn},${CFG.map.corp_outflow_abnormal},${CFG.map.blacklist}
+N001,王小智,natural,52000000,1800000,1500000,30,1600000,3,VIP,3,9000000,7000000,120,100,8,2,0.25,,,,,,,,0,0
+N002,林學成,natural,8000000,200000,260000,210,780000,2,一般,1,600000,800000,40,60,0,0,0.00,,,,,,,,0,0
+N003,張博士,natural,120000000,4500000,3700000,10,3200000,4,VVIP,4,12000000,9000000,180,140,10,5,0.35,,,,,,,,0,0
+C101,宏泰實業,corp,,,,,,,,,,,,,,,,38000000,26000000,800000000,18,A,3,45,0,0
+C102,景勝科技,corp,,,,,,,,,,,,,,,,9000000,6000000,200000000,32,AA,2,28,0,0
+C103,大鼎股份,corp,,,,,,,,,,,,,,,,1200000,3000000,50000000,6,BBB,1,12,1,0
+X999,黑名單測試,natural,0,1000000,1100000,20,500000,2,一般,1,300000,500000,20,30,0,0,0.00,,,,,,,,1,1`;
 
 el('#btnDemo').onclick=()=>{ raw = csvParse(demoCSV); process(); };
 
