@@ -10,7 +10,7 @@
       --grid-border:#2a355c;
     }
     html,body{height:100%;}
-    body{margin:0;background:linear-gradient(180deg,#CFFBFF 0%, #AEEFF0 40%, #84E0E1 100%);color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto}
+    body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto}
     .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
     .hero{display:flex;gap:20px;align-items:center}
     .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:#66e0ff;padding:6px 10px;border-radius:999px;border:1px solid #1d2a4d}
@@ -129,6 +129,10 @@
       <details style="margin-top:10px">
         <summary class="btn">CSV 欄位說明與範本（點我展開）</summary>
         <div id="fieldGuide"></div>
+        <div style="margin-top:10px">
+          <div class="kv"><span class="k">完整表頭範本（順序可自由調整）：</span></div>
+          <pre class="code" id="csvHeaderSample"></pre>
+        </div>
       </details>
       <!-- /CSV 欄位說明 -->
     </div>
@@ -627,20 +631,77 @@ el('#csvInput').addEventListener('change', async(e)=>{
 
 el('#btnClear').onclick=()=>{ raw=[]; enriched=[]; render(); el('#csvInput').value=''; };
 
-// === 7) 示範資料（涵蓋 B 模組新增欄位，可直接測） ==============================
-const demoCSV =
-`id,name,entity,${CFG.map.aum},${CFG.map.depNow},${CFG.map.depPrev},${CFG.map.lastDays},${CFG.map.salary},${CFG.map.degree},${CFG.map.vip},${CFG.map.prodKinds},${CFG.map.nat_txn_amt_3m},${CFG.map.nat_txn_amt_prev3m},${CFG.map.nat_txn_cnt_3m},${CFG.map.nat_txn_cnt_prev3m},${CFG.map.nat_ebank_login_3m},${CFG.map.nat_card_active_3m},${CFG.map.loan_util},${CFG.map.fxNow},${CFG.map.fxPrev},${CFG.map.capital},${CFG.map.years},${CFG.map.rating},${CFG.map.diversity},${CFG.map.netbank_txn},${CFG.map.corp_outflow_abnormal},${CFG.map.blacklist}
-N001,王小智,natural,52000000,1800000,1500000,30,1600000,3,VIP,3,9000000,7000000,120,100,8,2,0.25,,,,,,,,0,0
-N002,林學成,natural,8000000,200000,260000,210,780000,2,一般,1,600000,800000,40,60,0,0,0.00,,,,,,,,0,0
-N003,張博士,natural,120000000,4500000,3700000,10,3200000,4,VVIP,4,12000000,9000000,180,140,10,5,0.35,,,,,,,,0,0
-C101,宏泰實業,corp,,,,,,,,,,,,,,,,38000000,26000000,800000000,18,A,3,45,0,0
-C102,景勝科技,corp,,,,,,,,,,,,,,,,9000000,6000000,200000000,32,AA,2,28,0,0
-C103,大鼎股份,corp,,,,,,,,,,,,,,,,1200000,3000000,50000000,6,BBB,1,12,1,0
-X999,黑名單測試,natural,0,1000000,1100000,20,500000,2,一般,1,300000,500000,20,30,0,0,0.00,,,,,,,,1,1`;
+// === 7) 隨機示範資料生成 ======================================
+function randomPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function randomFloat(min,max){ return (Math.random()*(max-min)+min).toFixed(2); }
 
-el('#btnDemo').onclick=()=>{ raw = csvParse(demoCSV); process(); };
+function genDemoData(n=10){
+  const rows=[];
+  for(let i=0;i<n;i++){
+    if(Math.random()<0.6){ // 60% 自然人
+      rows.push({
+        id: "N"+String(i+1).padStart(3,'0'),
+        name: "NAT_" + String(i+1).padStart(3,'0'),
+        entity: "natural",
+        aum_12m: randomInt(5e6,1.2e8),
+        salary: randomInt(40e4,300e4),
+        degree: randomPick([1,2,3,4]),
+        vip_tier: randomPick(["一般","VIP","VVIP","高資產"]),
+        prod_kinds: randomInt(0,4),
+        age: randomInt(25,70),
+        occupation: randomPick(["上班族","醫師","律師","企業主","教師"]),
+        crm_segment: randomPick(["零售","高資產","數位優先"]),
+        avg_dep_3m: randomInt(20e4,500e4),
+        avg_dep_prev3m: randomInt(20e4,500e4),
+        last_txn_days: randomInt(1,400),
+        txn_amt_3m: randomInt(10e4,500e4),
+        txn_amt_prev3m: randomInt(10e4,500e4),
+        txn_cnt_3m: randomInt(10,200),
+        txn_cnt_prev3m: randomInt(10,200),
+        ebank_login_3m: randomInt(0,15),
+        card_active_3m: randomInt(0,10),
+        loan_util: randomFloat(0,1),
+        compliance_blacklist: 0
+      });
+    } else { // 40% 法人
+      rows.push({
+        id: "C"+String(i+1).padStart(3,'0'),
+        name:  "CORP_" + String(i+1).padStart(3,'0'),
+        entity: "corp",
+        capital: randomInt(1e7,5e8),
+        company_age_years: randomInt(1,50),
+        credit_rating: randomPick(["AAA","AA","A","BBB",1,2,3,4,5]),
+        biz_diversity: randomInt(1,6),
+        industry: randomPick(["科技","製造","金融","零售"]),
+        strategic_level: randomPick(["高","中","低"]),
+        fx_3m: randomInt(10e6,200e6),
+        fx_prev3m: randomInt(10e6,200e6),
+        corp_txn_amt_3m: randomInt(10e6,100e6),
+        corp_txn_amt_prev3m: randomInt(10e6,100e6),
+        netbank_txn: randomInt(0,50),
+        corp_outflow_abnormal: randomPick([0,0,0,1]), // 偶爾出現 1
+        compliance_blacklist: 0
+      });
+    }
+  }
+  return rows;
+}
 
-document.addEventListener('change', e=>{ if(e.target.id==='selEntity' || e.target.id==='selPage'){ renderTable(); }});
+// 匯出成 CSV 文字
+function toCSVfromObjects(arr){
+  const hdr = Object.keys(arr[0]);
+  const lines = arr.map(r=>hdr.map(k=>`"${(r[k]??'')}"`).join(','));
+  return [hdr.join(','),...lines].join('\n');
+}
+
+el('#btnDemo').onclick=()=>{
+  const demoData = genDemoData(12); // 產生 12 筆
+  const csv = toCSVfromObjects(demoData);
+  raw = csvParse(csv);
+  process();
+};
+
 
 // === 8) 生成 CSV 欄位說明（由 CFG.map 自動渲染） =============================
 function buildFieldGuide(){
