@@ -27,25 +27,54 @@
     .kv .k{color:#98a8c6}
 
     /* ======= 4×4 矩陣版面（左列：推薦；上列：關注） ======= */
-    .matrix-wrapper{
-      display:grid;
-      grid-template-columns:120px repeat(3,1fr);
-      grid-template-rows:60px repeat(3,1fr);
-      gap:0;
-      border:1px solid var(--grid-border);
-      border-radius:12px;
-      overflow:hidden;
-    }
-    .matrix-header,.matrix-side{
-      display:flex;align-items:center;justify-content:center;
-      background:#e9eef7;color:#000;border-right:1px solid var(--grid-border);border-bottom:1px solid var(--grid-border);
-      font-weight:700;
-    }
-    .matrix-side{background:#e9edf3}
+    :root{
+  --side-w: 120px;   /* 左側推薦欄位寬 */
+  --head-h: 60px;    /* 上方關注列高 */
+  --row-h: 120px;    /* 每個矩陣 cell 高度 */
+}
 
-    .matrix3{display:grid;grid-template-columns:repeat(3,1fr)}
-    .cell{border-right:1px solid var(--grid-border);border-bottom:1px solid var(--grid-border);padding:10px;position:relative}
-    .cell h4{margin:0 0 6px;font-size:14px;color:#000}
+.matrix-wrapper{
+  display:grid;
+  grid-template-columns: var(--side-w) repeat(3,1fr);
+  grid-template-rows: var(--head-h) repeat(3,var(--row-h));
+  gap:0;
+  border:1px solid var(--grid-border);
+  border-radius:12px;
+  overflow:hidden;
+}
+
+.matrix-header,
+.matrix-side{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#e9eef7;
+  color:#000;
+  border-right:1px solid var(--grid-border);
+  border-bottom:1px solid var(--grid-border);
+  font-weight:700;
+}
+
+.matrix-side{
+  background:#e9edf3;
+}
+
+.matrix3{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+}
+
+.cell{
+  border-right:1px solid var(--grid-border);
+  border-bottom:1px solid var(--grid-border);
+  padding:10px;
+  position:relative;
+}
+.cell h4{
+  margin:0 0 6px;
+  font-size:14px;
+  color:#000;
+}
 
     /* 筆數膠囊：黑底白字 */
     .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
@@ -145,11 +174,6 @@
       <div style="max-height:360px;overflow:auto">
         <table class="tbl" id="resultTbl"></table>
       </div>
-    </div>
-
-    <div class="panel" style="margin-top:16px">
-      <h3 style="margin:0 0 8px">欄位對應 / 規則設定（可依公司資料調整）</h3>
-      <pre class="code" id="cfgView"></pre>
     </div>
 
     <footer>© 2025 AIT3 Demo • Client-Only • 無資料上傳</footer>
@@ -580,7 +604,7 @@ function render(){
 
   // 表格 & 設定檢視
   renderTable();
-  el('#cfgView').textContent = JSON.stringify(CFG, null, 2);
+  const box = el('#cfgView'); if (box) box.textContent = JSON.stringify(CFG, null, 2);
 }
 
 function highlightFilter(){
