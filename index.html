@@ -782,7 +782,11 @@ function batchAssign(){
    11) 初始化
    ----------------------------------------------- */
 document.addEventListener('DOMContentLoaded', ()=>{
-  // 若需要，這裡可自動載入示範資料：
+  // 先把九宮格畫出（即使還沒載入資料）
+  render();
+
+  // 若想一進頁就帶示範資料，取消下一行註解
   // el('#btnDemo').click();
 });
 </script>
+
