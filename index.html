@@ -58,14 +58,13 @@
     .cell-B1 { background:#f57c00; } /* 高潛力警示（橘） */
     .cell-C1,.cell-C2,.cell-C3,.cell-C4,.cell-C5 { background:#fff176; } /* 中/低潛力（淡黃） */
     .cell-B2 { background:#fbc02d; } /* 中潛力警示（黃） */
-    
-    /* 獨立的 Z 列 */
-  .zbar{
-    margin-top:8px;background:#f5f7fa;color:#000;
-    border:1px solid var(--grid-border);border-radius:8px;
-    padding:10px;text-align:center;font-weight:700
-  }
-</style>
+
+    /* Z 合規排除獨立列 */
+    .zbar{
+      margin-top:8px;background:#f5f7fa;color:#000;
+      border:1px solid var(--grid-border);border-radius:8px;
+      padding:10px;text-align:center;font-weight:700;cursor:pointer;
+    }
 
     /* 共同表格 */
     .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
@@ -97,9 +96,6 @@
 </head>
 <body>
 
-<!-- =========================================================
-     Page 切換容器（不動你的第一頁 UI，只包裝起來）
-     ========================================================= -->
 <section id="page1" style="display:block">
   <div class="wrap">
     <div class="hero">
@@ -135,7 +131,7 @@
       <div class="panel">
         <div class="row"><h3 style="margin:0">九宮格決策摘要</h3><button class="btn right" id="btnDownload">匯出結果 CSV</button></div>
 
-        <!-- 4×4 版面 -->
+        <!-- 九宮格 -->
         <div class="matrix-wrapper">
           <div class="matrix-header"></div>
           <div class="matrix-header">關注低</div>
@@ -155,13 +151,13 @@
           <div class="matrix-side">推薦低</div>
           <div class="cell" id="cell-LL"></div>
           <div class="cell" id="cell-LM"></div>
-          <div class="cell" id="cell-LH"></div>
+          <div class="cell" id="cell-LH"></div> <!-- 這格為 C5 -->
         </div>
+
+        <!-- Z 合規排除獨立列（放在同一 panel 內）-->
+        <div class="zbar" id="zBar"></div>
       </div>
 
-      <!-- ✅ 新增：Z 合規排除獨立列 -->
-      <div class="zbar" id="zBar"></div>
-      
       <div class="panel">
         <h3 style="margin:0 0 8px">篩選</h3>
         <div class="chips" id="filters"></div>
@@ -182,7 +178,6 @@
       </div>
     </div>
 
-    <!-- ✅ 依照你的指定：新增兩顆按鈕，位置在「篩選」與「計算結果」之間 -->
     <div class="row" style="margin:16px 0 0 0">
       <button class="btn" id="btnGoDispatch">📌 潛力名單派送</button>
       <button class="btn ghost" id="btnTableau">📊 Tableau</button>
@@ -200,7 +195,6 @@
   </div>
 </section>
 
-<!-- ===================== Page 2：潛力名單派送（僅 A1/A2/B1/B2） ===================== -->
 <section id="page2" class="hidden">
   <div class="dispatch-wrap">
     <div class="row" style="margin-bottom:8px">
@@ -208,7 +202,6 @@
       <div class="right mini muted2">僅顯示 A1 / A2 / B1 / B2；RM 狀態與註記會儲存在你的瀏覽器 <b>localStorage</b> 中</div>
     </div>
 
-    <!-- 工具列（搜尋與批次指派步驟條） -->
     <div class="dispatch-card">
       <div class="dispatch-toolbar">
         <div class="dispatch-search"><input id="dispatchSearch" type="search" placeholder="🔎 搜尋 區域/分行/RM/客戶ID/名稱/代碼..." oninput="renderDispatch()"></div>
@@ -218,22 +211,15 @@
       </div>
     </div>
 
-    <!-- 名單表格（樣式參考你提供的截圖） -->
     <div style="overflow:auto">
-      <table class="dispatch-table" id="dispatchTbl">
-        <!-- 內容由 renderDispatch() 產生 -->
-      </table>
+      <table class="dispatch-table" id="dispatchTbl"></table>
     </div>
   </div>
 </section>
 
-<!-- （可擴充：Page3 驗證頁；若未使用可忽略）
-<section id="page3" class="hidden"> ... </section>
--->
-
 <script>
 /* -----------------------------------------------
-   1) 系統設定（維持你原有參數與計算）
+   1) 系統設定
    ----------------------------------------------- */
 const CFG = {
   cut: { R: {hi: 70, mid: 40}, A: {hi: 70, mid: 40} },
@@ -246,8 +232,8 @@ const CFG = {
     MH: { code: 'B2', title: '中潛力警示', tone:'risk' },
     LL: { code: 'C3', title: '低潛力維護', tone:'ok'   },
     LM: { code: 'C4', title: '低潛力監測', tone:'warn' },
-    LH: { code: 'C5', title: '低潛力警示', tone:'risk' },
-    Z : { code: 'Z',  title: '合規排除',   tone:'risk' } 
+    LH: { code: 'C5', title: '低潛力警示', tone:'risk' },  // 原 Z → C5
+    Z : { code: 'Z',  title: '合規排除',   tone:'risk' }    // 獨立列
   },
   map: {
     id:'id', name:'name', entity:'entity', blacklist:'compliance_blacklist',
@@ -327,7 +313,7 @@ function csvParse(text){
 }
 
 /* -----------------------------------------------
-   3) 計分與分類（維持你的原邏輯）
+   3) 計分與分類
    ----------------------------------------------- */
 function whiteBoostNatural(rec){
   const m=CFG.map; const prod=asNum(rec[m.prodKinds]);
@@ -438,7 +424,7 @@ function inferEntity(rec){
 const isExcluded = rec => /^(1|true|Y)$/i.test(String(rec[CFG.map.blacklist]||''));
 
 /* -----------------------------------------------
-   5) 主流程（資料 → enriched → Page1 渲染）
+   5) 主流程
    ----------------------------------------------- */
 let raw=[], enriched=[], viewFilter='ALL';
 
@@ -454,7 +440,6 @@ function process(){
     return {...rec, entity, R, A, cell, excluded:false, revenue};
   });
   render();
-  // 若此時在派送頁，讓畫面同步更新
   if(!el('#page2').classList.contains('hidden')) renderDispatch();
 }
 
@@ -468,12 +453,12 @@ function rescale(arr, v, [lo,hi]){
 }
 function quantile(a,q){ const b=[...a].sort((x,y)=>x-y); const i=(b.length-1)*q; const l=Math.floor(i), r=Math.ceil(i); if(l===r) return b[l]; return b[l]*(r-i)+b[r]*(i-l); }
 
-<script>
+/* -----------------------------------------------
+   5.1) 首頁渲染 + Z 列
+   ----------------------------------------------- */
 function render(){
   const groups = groupBy(enriched.filter(r=>!r.excluded), r=>r.cell);
-
-  // 3×3 的九宮格仍用這 9 格（LH 現在是 C5）
-  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
+  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH']; // LH= C5
   const idOf = k => `cell-${k}`;
 
   for(const key of order){
@@ -486,13 +471,12 @@ function render(){
     box.onclick=()=>{ viewFilter=key; renderTable(); highlightFilter(); };
   }
 
-  // ✅ Z 獨立列（計數 = excluded）
+  // Z 獨立列
   const zCount = enriched.filter(r=>r.excluded).length;
   const zbar = el('#zBar');
   if(zbar){
     zbar.innerHTML = `Z｜${CFG.labels.Z.title}　•　筆數 <span class="num">${fmt(zCount)}</span>`;
     zbar.onclick = ()=>{ viewFilter='Z'; renderTable(); highlightFilter(); };
-    zbar.style.cursor = 'pointer';
   }
 
   // 篩選按鈕
@@ -503,7 +487,6 @@ function render(){
     const b=document.createElement('button'); b.className='btn'; b.textContent=`${CFG.labels[key].code}`;
     b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();}; f.appendChild(b);
   }
-  // ✅ 追加 Z 按鈕
   const bz=document.createElement('button'); bz.className='btn'; bz.textContent='Z';
   bz.onclick=()=>{viewFilter='Z'; renderTable(); highlightFilter();}; f.appendChild(bz);
 
@@ -511,22 +494,19 @@ function render(){
   renderTable();
   buildFieldGuide();
 }
-
 function highlightFilter(){
-  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH','Z']; // ✅ 多了 Z
+  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH','Z'];
   const btns=[...document.querySelectorAll('#filters .btn')];
   btns.forEach(b=>b.style.outline='none');
   const idx=['ALL',...order].indexOf(viewFilter);
   if(idx>=0 && btns[idx]) btns[idx].style.outline='2px solid var(--brand)';
 }
-<script>
 function renderTable(){
   const tbl=el('#resultTbl');
   const headers=['ID','名稱','客群','R(推薦)','A(關注)','矩陣','模擬貢獻'];
 
   let rows;
   if(viewFilter==='Z'){
-    // ✅ 顯示被合規排除者
     rows = enriched.filter(r=>r.excluded);
   }else{
     rows = enriched.filter(r=>!r.excluded && (viewFilter==='ALL'||r.cell===viewFilter));
@@ -550,7 +530,6 @@ function renderTable(){
       `${meta.code}｜${meta.title}`,
       isZ ? '' : (r.revenue? fmt(Math.round(r.revenue)) : '')
     ];
-
     const tr=document.createElement('tr');
     tr.innerHTML = vals.map((v,i)=>`<td>${(!isZ && (i===3||i===4) && v!=='')? (v+'%') : (v??'')}</td>`).join('');
     body.appendChild(tr);
@@ -560,12 +539,10 @@ function renderTable(){
   // 更新總筆數（不含 Z）
   el('#statRows').textContent = fmt(enriched.filter(r=>!r.excluded).length);
 }
-</script>
-
 function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
 
 /* -----------------------------------------------
-   6) 匯入 / 匯出（保留）
+   6) 匯入 / 匯出
    ----------------------------------------------- */
 function toCSV(arr){
   if(!arr.length) return '';
@@ -588,7 +565,7 @@ el('#csvInput').addEventListener('change', async(e)=>{
 el('#btnClear').onclick=()=>{ raw=[]; enriched=[]; render(); el('#csvInput').value=''; };
 
 /* -----------------------------------------------
-   7) 示範資料（保留）
+   7) 示範資料
    ----------------------------------------------- */
 function randomPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
@@ -630,7 +607,7 @@ function toCSVfromObjects(arr){
 el('#btnDemo').onclick=()=>{ const demo=genDemoData(18); const csv=toCSVfromObjects(demo); raw=csvParse(csv); process(); };
 
 /* -----------------------------------------------
-   8) CSV 欄位說明（保留）
+   8) CSV 欄位說明
    ----------------------------------------------- */
 function buildFieldGuide(){
   const box=el('#fieldGuide'); const pre=el('#csvHeaderSample'); if(!box||!pre) return;
@@ -651,21 +628,10 @@ function buildFieldGuide(){
   rows.push(['自然人', m.nat_txn_amt_3m, '自然人', '交易金額(近3月)']);
   rows.push(['自然人', m.nat_txn_amt_prev3m, '自然人', '交易金額(前3月)']);
   rows.push(['自然人', m.nat_txn_cnt_3m, '自然人', '交易筆數(近3月)']);
-  rows.push(['自然人', m.nat_txn_cnt_prev3m, '自然人', '交易筆數(前3月)']);
+  rows.push(['自然人', m.nat_txn_cnt_prev3m, '自然人', '前3月交易筆數)']);
   rows.push(['自然人', m.nat_ebank_login_3m, '自然人', '網銀登入(近3月)']);
-  rows.push(['自然人', m.nat_txn_amt_3m, '自然人', '近3月交易金額（月均）']);
-  rows.push(['自然人', m.nat_txn_amt_prev3m, '自然人', '前3月交易金額（月均）']);
-  rows.push(['自然人', m.nat_txn_cnt_3m, '自然人', '近3月交易次數']);
-  rows.push(['自然人', m.nat_txn_cnt_prev3m, '自然人', '前3月交易次數']);
-  rows.push(['自然人', m.nat_ebank_login_3m, '自然人', '近3月網銀登入次數（少→可能休眠）']);
-  rows.push(['自然人', m.nat_card_active_3m, '自然人', '近3月信用卡有效交易數（少→可能休眠）']);
+  rows.push(['自然人', m.nat_card_active_3m, '自然人', '近3月信用卡有效交易數']);
   rows.push(['自然人', m.loan_util, '自然人', '授信額度使用率（0~1）']);
-  // 補充（可選）
-  rows.push(['可選', m.nat_age, '自然人', '年齡']);
-  rows.push(['可選', m.nat_job, '自然人', '職業/職稱']);
-  rows.push(['可選', m.nat_segment, '自然人', 'CRM 客群分層']);
-
-  // 法人
   rows.push(['法人', m.capital, '法人', '資本額']);
   rows.push(['法人', m.years, '法人', '成立年數']);
   rows.push(['法人', m.rating, '法人', '企業評等（AAA/A/數值）']);
@@ -679,14 +645,12 @@ function buildFieldGuide(){
   rows.push(['法人', m.netbank_txn, '法人', '企網銀筆數（3m）']);
   rows.push(['法人', m.corp_outflow_abnormal, '法人', '對外異常轉出（0/1）']);
 
-  // 產出表格
   const th = ['必要/對象','欄位名（CSV 表頭）','適用','說明'];
   const thead = `<thead><tr>${th.map(x=>`<th>${x}</th>`).join('')}</tr></thead>`;
   const tbody = rows.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('');
   box.innerHTML = `<table class="tbl">${thead}<tbody>${tbody}</tbody></table>`;
   box.dataset.done='1';
 
-  // 表頭範本
   const hdr = [
     m.id,m.name,m.entity,m.blacklist,
     m.aum,m.salary,m.degree,m.vip,m.prodKinds,
@@ -716,7 +680,7 @@ el('#selEntity').onchange=()=>process();
 el('#selPage').onchange=()=>renderTable();
 
 /* -----------------------------------------------
-   10) Page2：派送（A1/A2/B1/B2） with localStorage
+   10) Page2：派送
    ----------------------------------------------- */
 const DISPATCH_KEY='ait3_dispatch_v1';
 function loadDispatchState(){
@@ -765,9 +729,7 @@ function renderDispatch(){
       <td>${r.R}%</td>
       <td>${r.A}%</td>
       <td>${r.revenue?fmt(Math.round(r.revenue)):''}</td>
-      <td>
-        <input class="rm-input" placeholder="輸入 RM 名稱" value="${st.rm||''}" data-id="${id}">
-      </td>
+      <td><input class="rm-input" placeholder="輸入 RM 名稱" value="${st.rm||''}" data-id="${id}"></td>
       <td>
         <select class="btn mini status" data-id="${id}">
           <option value="">未處理</option>
@@ -777,22 +739,16 @@ function renderDispatch(){
         </select>
         <div class="mini muted2">${st.when?('更新：'+new Date(st.when).toLocaleString('zh-TW')):''}</div>
       </td>
-      <td>
-        <textarea class="noteedit" data-id="${id}" placeholder="補充說明…">${st.note||''}</textarea>
-      </td>
-      <td>
-        <button class="btn mini ghost one-assign" data-id="${id}">指派</button>
-      </td>`;
+      <td><textarea class="noteedit" data-id="${id}" placeholder="補充說明…">${st.note||''}</textarea></td>
+      <td><button class="btn mini ghost one-assign" data-id="${id}">指派</button></td>`;
     body.appendChild(tr);
   }
   tbl.innerHTML = head;
   tbl.appendChild(body);
 
-  // 綁定事件
   const chkAll = el('#chkAll');
   if(chkAll) chkAll.onchange = ()=>{ [...tbl.querySelectorAll('.rowchk')].forEach(c=>c.checked=chkAll.checked); };
 
-  // 單筆指派
   tbl.querySelectorAll('.one-assign').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.dataset.id;
@@ -806,7 +762,6 @@ function renderDispatch(){
       renderDispatch();
     };
   });
-  // 即時保存（輸入框/選單）
   tbl.querySelectorAll('.rm-input').forEach(inp=>{
     inp.oninput = ()=>{ const s=loadDispatchState(); const id=inp.dataset.id; s[id]={...(s[id]||{}), rm:inp.value, when:Date.now()}; saveDispatchState(s); };
   });
@@ -839,11 +794,9 @@ function batchAssign(){
    11) 初始化
    ----------------------------------------------- */
 document.addEventListener('DOMContentLoaded', ()=>{
-  // 先把九宮格畫出（即使還沒載入資料）
-  render();
-
-  // 若想一進頁就帶示範資料，取消下一行註解
-  // el('#btnDemo').click();
+  render(); // 先畫空九宮格
+  // el('#btnDemo').click(); // 需要就打開
 });
 </script>
-
+</body>
+</html>
