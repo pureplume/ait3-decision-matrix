@@ -563,14 +563,22 @@ el('#btnClear').onclick=()=>{ raw=[]; enriched=[]; render(); el('#csvInput').val
 /* -----------------------------------------------
    7) 示範資料
    ----------------------------------------------- */
+/* -----------------------------------------------
+   7) 示範資料
+   ----------------------------------------------- */
 function randomPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 function randomFloat(min,max){ return (Math.random()*(max-min)+min).toFixed(2); }
-function genDemoData(n=12){
+
+function genDemoData(n=100){
   const rows=[];
+  const excludeRate = 0.01 + Math.random()*0.02; // 🎯 1%~3% 機率命中黑名單
+
   for(let i=0;i<n;i++){
+    let rec;
     if(Math.random()<0.6){
-      rows.push({
+      // 自然人
+      rec = {
         id:"N"+String(i+1).padStart(3,'0'), name:"NAT_"+String(i+1).padStart(3,'0'), entity:"natural",
         aum_12m:randomInt(5e6,1.2e8), salary:randomInt(40e4,300e4), degree:randomPick([1,2,3,4]),
         vip_tier:randomPick(["一般","VIP","VVIP","高資產"]), prod_kinds:randomInt(0,4),
@@ -581,9 +589,10 @@ function genDemoData(n=12){
         txn_cnt_3m:randomInt(10,200), txn_cnt_prev3m:randomInt(10,200),
         ebank_login_3m:randomInt(0,15), card_active_3m:randomInt(0,10), loan_util:randomFloat(0,1),
         compliance_blacklist:0
-      });
+      };
     }else{
-      rows.push({
+      // 法人
+      rec = {
         id:"C"+String(i+1).padStart(3,'0'), name:"CORP_"+String(i+1).padStart(3,'0'), entity:"corp",
         capital:randomInt(1e7,5e8), company_age_years:randomInt(1,50),
         credit_rating:randomPick(["AAA","AA","A","BBB",1,2,3,4,5]),
@@ -591,16 +600,33 @@ function genDemoData(n=12){
         strategic_level:randomPick(["高","中","低"]),
         fx_3m:randomInt(10e6,200e6), fx_prev3m:randomInt(10e6,200e6),
         corp_txn_amt_3m:randomInt(10e6,100e6), corp_txn_amt_prev3m:randomInt(10e6,100e6),
-        netbank_txn:randomInt(0,50), corp_outflow_abnormal:randomPick([0,0,0,1]), compliance_blacklist:0
-      });
+        netbank_txn:randomInt(0,50), corp_outflow_abnormal:randomPick([0,0,0,1]),
+        compliance_blacklist:0
+      };
     }
+
+    // 🎯 1~3% 標記黑名單 → R=0, A=100
+    if(Math.random()<excludeRate){
+      rec.compliance_blacklist = 1;
+    }
+
+    rows.push(rec);
   }
   return rows;
 }
+
 function toCSVfromObjects(arr){
-  const hdr=Object.keys(arr[0]); const lines=arr.map(r=>hdr.map(k=>`"${(r[k]??'')}"`).join(',')); return [hdr.join(','),...lines].join('\n');
+  const hdr=Object.keys(arr[0]);
+  const lines=arr.map(r=>hdr.map(k=>`"${(r[k]??'')}"`).join(','));
+  return [hdr.join(','),...lines].join('\n');
 }
-el('#btnDemo').onclick=()=>{ const demo=genDemoData(18); const csv=toCSVfromObjects(demo); raw=csvParse(csv); process(); };
+
+el('#btnDemo').onclick=()=>{
+  const demo=genDemoData(100); // 固定產生 100 筆
+  const csv=toCSVfromObjects(demo);
+  raw=csvParse(csv);
+  process();
+};
 
 /* -----------------------------------------------
    8) CSV 欄位說明
