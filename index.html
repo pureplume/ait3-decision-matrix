@@ -650,17 +650,6 @@ function buildFieldGuide(){
   const tbody = rows.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('');
   box.innerHTML = `<table class="tbl">${thead}<tbody>${tbody}</tbody></table>`;
   box.dataset.done='1';
-
-  const hdr = [
-    m.id,m.name,m.entity,m.blacklist,
-    m.aum,m.salary,m.degree,m.vip,m.prodKinds,
-    m.depNow,m.depPrev,m.lastDays,
-    m.nat_txn_amt_3m,m.nat_txn_amt_prev3m,m.nat_txn_cnt_3m,m.nat_txn_cnt_prev3m,
-    m.nat_ebank_login_3m,m.nat_card_active_3m,m.loan_util,
-    m.capital,m.years,m.rating,m.diversity,m.corp_industry,m.corp_strategic,
-    m.fxNow,m.fxPrev,m.corp_txn_amt_3m,m.corp_txn_amt_prev3m,m.netbank_txn,m.corp_outflow_abnormal
-  ];
-  pre.textContent = hdr.join(',');
 }
 
 /* -----------------------------------------------
