@@ -56,9 +56,16 @@
     .cell-A1 { background:#f57c00; } /* 高潛力開發（橘） */
     .cell-A2 { background:#fbc02d; } /* 高潛力監測（黃） */
     .cell-B1 { background:#f57c00; } /* 高潛力警示（橘） */
-    .cell-C1,.cell-C2,.cell-C3,.cell-C4 { background:#fff176; } /* 中/低潛力（淡黃） */
+    .cell-C1,.cell-C2,.cell-C3,.cell-C4,.cell-C5 { background:#fff176; } /* 中/低潛力（淡黃） */
     .cell-B2 { background:#fbc02d; } /* 中潛力警示（黃） */
-    .cell-Z  { background:#ffffff; } /* 合規排除（白底） */
+    
+    /* 獨立的 Z 列 */
+  .zbar{
+    margin-top:8px;background:#f5f7fa;color:#000;
+    border:1px solid var(--grid-border);border-radius:8px;
+    padding:10px;text-align:center;font-weight:700
+  }
+</style>
 
     /* 共同表格 */
     .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
@@ -152,6 +159,9 @@
         </div>
       </div>
 
+      <!-- ✅ 新增：Z 合規排除獨立列 -->
+      <div class="zbar" id="zBar"></div>
+      
       <div class="panel">
         <h3 style="margin:0 0 8px">篩選</h3>
         <div class="chips" id="filters"></div>
@@ -236,7 +246,8 @@ const CFG = {
     MH: { code: 'B2', title: '中潛力警示', tone:'risk' },
     LL: { code: 'C3', title: '低潛力維護', tone:'ok'   },
     LM: { code: 'C4', title: '低潛力監測', tone:'warn' },
-    LH: { code: 'Z',  title: '合規排除',   tone:'risk' }
+    LH: { code: 'C5', title: '低潛力警示', tone:'risk' },
+    Z : { code: 'Z',  title: '合規排除',   tone:'risk' } 
   },
   map: {
     id:'id', name:'name', entity:'entity', blacklist:'compliance_blacklist',
@@ -457,10 +468,14 @@ function rescale(arr, v, [lo,hi]){
 }
 function quantile(a,q){ const b=[...a].sort((x,y)=>x-y); const i=(b.length-1)*q; const l=Math.floor(i), r=Math.ceil(i); if(l===r) return b[l]; return b[l]*(r-i)+b[r]*(i-l); }
 
+<script>
 function render(){
   const groups = groupBy(enriched.filter(r=>!r.excluded), r=>r.cell);
+
+  // 3×3 的九宮格仍用這 9 格（LH 現在是 C5）
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
   const idOf = k => `cell-${k}`;
+
   for(const key of order){
     const meta=CFG.labels[key];
     const count=(groups[key]||[]).length;
@@ -470,6 +485,17 @@ function render(){
       <div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
     box.onclick=()=>{ viewFilter=key; renderTable(); highlightFilter(); };
   }
+
+  // ✅ Z 獨立列（計數 = excluded）
+  const zCount = enriched.filter(r=>r.excluded).length;
+  const zbar = el('#zBar');
+  if(zbar){
+    zbar.innerHTML = `Z｜${CFG.labels.Z.title}　•　筆數 <span class="num">${fmt(zCount)}</span>`;
+    zbar.onclick = ()=>{ viewFilter='Z'; renderTable(); highlightFilter(); };
+    zbar.style.cursor = 'pointer';
+  }
+
+  // 篩選按鈕
   const f=el('#filters'); f.innerHTML='';
   const all=document.createElement('button'); all.className='btn'; all.textContent='顯示全部';
   all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();}; f.appendChild(all);
@@ -477,34 +503,65 @@ function render(){
     const b=document.createElement('button'); b.className='btn'; b.textContent=`${CFG.labels[key].code}`;
     b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();}; f.appendChild(b);
   }
+  // ✅ 追加 Z 按鈕
+  const bz=document.createElement('button'); bz.className='btn'; bz.textContent='Z';
+  bz.onclick=()=>{viewFilter='Z'; renderTable(); highlightFilter();}; f.appendChild(bz);
+
   highlightFilter();
   renderTable();
   buildFieldGuide();
 }
+
 function highlightFilter(){
-  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
+  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH','Z']; // ✅ 多了 Z
   const btns=[...document.querySelectorAll('#filters .btn')];
   btns.forEach(b=>b.style.outline='none');
   const idx=['ALL',...order].indexOf(viewFilter);
   if(idx>=0 && btns[idx]) btns[idx].style.outline='2px solid var(--brand)';
 }
+<script>
 function renderTable(){
   const tbl=el('#resultTbl');
   const headers=['ID','名稱','客群','R(推薦)','A(關注)','矩陣','模擬貢獻'];
-  const rows=enriched.filter(r=>!r.excluded && (viewFilter==='ALL'||r.cell===viewFilter));
+
+  let rows;
+  if(viewFilter==='Z'){
+    // ✅ 顯示被合規排除者
+    rows = enriched.filter(r=>r.excluded);
+  }else{
+    rows = enriched.filter(r=>!r.excluded && (viewFilter==='ALL'||r.cell===viewFilter));
+  }
+
   const limit=el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
   tbl.innerHTML='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
   const body=document.createElement('tbody');
+
   for(const r of rows.slice(0,limit)){
+    const isZ = !!r.excluded;
+    const meta = isZ ? CFG.labels.Z : CFG.labels[r.cell];
+    const entityTxt = r.entity==='corp'?'法人':'自然人';
+
+    const vals = [
+      r[CFG.map.id],
+      r[CFG.map.name],
+      entityTxt,
+      isZ ? '' : r.R,
+      isZ ? '' : r.A,
+      `${meta.code}｜${meta.title}`,
+      isZ ? '' : (r.revenue? fmt(Math.round(r.revenue)) : '')
+    ];
+
     const tr=document.createElement('tr');
-    const values=[r[CFG.map.id], r[CFG.map.name], r.entity==='corp'?'法人':'自然人',
-      r.R, r.A, `${CFG.labels[r.cell].code}｜${CFG.labels[r.cell].title}`, r.revenue? fmt(Math.round(r.revenue)) : '' ];
-    tr.innerHTML=values.map((v,i)=>`<td>${i===3||i===4? (v+'%'): v??''}</td>`).join('');
+    tr.innerHTML = vals.map((v,i)=>`<td>${(!isZ && (i===3||i===4) && v!=='')? (v+'%') : (v??'')}</td>`).join('');
     body.appendChild(tr);
   }
   tbl.appendChild(body);
+
+  // 更新總筆數（不含 Z）
   el('#statRows').textContent = fmt(enriched.filter(r=>!r.excluded).length);
 }
+</script>
+
 function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
 
 /* -----------------------------------------------
