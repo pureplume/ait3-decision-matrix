@@ -606,13 +606,17 @@ el('#btnDemo').onclick=()=>{ const demo=genDemoData(18); const csv=toCSVfromObje
    8) CSV 欄位說明
    ----------------------------------------------- */
 function buildFieldGuide(){
-  const box=el('#fieldGuide'); const pre=el('#csvHeaderSample'); if(!box||!pre) return;
+  const box = el('#fieldGuide');
+  if(!box) return;
   if(box.dataset.done==='1') return;
-  const m=CFG.map; const rows=[];
+
+  const m=CFG.map; 
+  const rows=[];
   rows.push(['必填', m.id, '共通', '客戶 ID']);
   rows.push(['必填', m.name, '共通', '客戶名稱']);
   rows.push(['必填', m.entity, '共通', '客群型別（natural / corp；可填「自然人/法人」）']);
   rows.push(['共通', m.blacklist, '共通', '合規黑名單(1/0 或 true/false)']);
+  // 自然人
   rows.push(['自然人', m.aum, '自然人', '投資 AUM（12M）']);
   rows.push(['自然人', m.salary, '自然人', '年薪']);
   rows.push(['自然人', m.degree, '自然人', '學歷(1~4)']);
@@ -624,10 +628,12 @@ function buildFieldGuide(){
   rows.push(['自然人', m.nat_txn_amt_3m, '自然人', '交易金額(近3月)']);
   rows.push(['自然人', m.nat_txn_amt_prev3m, '自然人', '交易金額(前3月)']);
   rows.push(['自然人', m.nat_txn_cnt_3m, '自然人', '交易筆數(近3月)']);
-  rows.push(['自然人', m.nat_txn_cnt_prev3m, '自然人', '前3月交易筆數)']);
+  rows.push(['自然人', m.nat_txn_cnt_prev3m, '自然人', '交易筆數(前3月)']);
   rows.push(['自然人', m.nat_ebank_login_3m, '自然人', '網銀登入(近3月)']);
-  rows.push(['自然人', m.nat_card_active_3m, '自然人', '近3月信用卡有效交易數']);
-  rows.push(['自然人', m.loan_util, '自然人', '授信額度使用率（0~1）']);
+  rows.push(['自然人', m.nat_card_active_3m, '自然人', '信用卡活躍交易數(近3月)']);
+  rows.push(['自然人', m.loan_util, '自然人', '授信額度使用率']);
+
+  // 法人
   rows.push(['法人', m.capital, '法人', '資本額']);
   rows.push(['法人', m.years, '法人', '成立年數']);
   rows.push(['法人', m.rating, '法人', '企業評等（AAA/A/數值）']);
@@ -641,6 +647,7 @@ function buildFieldGuide(){
   rows.push(['法人', m.netbank_txn, '法人', '企網銀筆數（3m）']);
   rows.push(['法人', m.corp_outflow_abnormal, '法人', '對外異常轉出（0/1）']);
 
+  // 產出表格
   const th = ['必要/對象','欄位名（CSV 表頭）','適用','說明'];
   const thead = `<thead><tr>${th.map(x=>`<th>${x}</th>`).join('')}</tr></thead>`;
   const tbody = rows.map(r=>`<tr>${r.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('');
