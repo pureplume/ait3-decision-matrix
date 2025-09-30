@@ -234,7 +234,7 @@ const CFG = {
   map: {
     id:'id', name:'name', entity:'entity', blacklist:'compliance_blacklist',
     aum:'aum_12m', salary:'salary', degree:'degree', vip:'vip_tier', prodKinds:'prod_kinds',
-    nat_age:'age', nat_job:'occupation', nat_segment:'crm_segment',
+    nat_age:'age', nat_job:'AML_RISKRATINGCASE - JOBTITLE1197', nat_segment:'crm_segment',
     depNow:'avg_dep_3m', depPrev:'avg_dep_prev3m', lastDays:'last_txn_days',
     nat_txn_amt_3m:'txn_amt_3m', nat_txn_amt_prev3m:'txn_amt_prev3m',
     nat_txn_cnt_3m:'txn_cnt_3m', nat_txn_cnt_prev3m:'txn_cnt_prev3m',
@@ -246,7 +246,7 @@ const CFG = {
   },
   weight:{
     natural:{
-      R:{depGrowth:30, aum:30, vip:15, degree:10, salary:10, prod:5, txnAmtGrowth:0, txnCntGrowth:0, loanUtil:0},
+      R:{job:10, depGrowth:30, aum:30, vip:15, degree:10, salary:10, prod:5, txnAmtGrowth:0, txnCntGrowth:0, loanUtil:0},
       A:{depDrop:45, inactive:35, riskFlag:20, ebankDormant:0, cardDormant:0},
       white:{prodMax:1, prodLow:1, boost:10}
     },
@@ -311,6 +311,23 @@ function csvParse(text){
 /* -----------------------------------------------
    3) 計分與分類
    ----------------------------------------------- */
+/* -----------------------------------------------
+   3) 計分與分類
+   ----------------------------------------------- */
+
+// === 職業別轉換：代碼 → 穩定性分數 ===
+// 高穩定：01 負責人/實際經營者，02 高階主管，05 會計師，06 律師，07 其他專業人員
+// 中穩定：03 一般主管，04 一般職員，12 基金操作員
+// 低穩定：08 佣金收入者，09 學生，10 自由業/其他，11 無業/家管
+// 若代碼未知 → 回傳 0.5（中間值）
+function jobStabilityScore(code){
+  const c = String(code||'').padStart(2,'0');
+  if(['01','02','05','06','07'].includes(c)) return 1.0;
+  if(['03','04','12'].includes(c)) return 0.6;
+  if(['08','09','10','11'].includes(c)) return 0.3;
+  return 0.5;
+}
+
 function whiteBoostNatural(rec){
   const m=CFG.map; const prod=asNum(rec[m.prodKinds]);
   const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
@@ -328,6 +345,7 @@ function whiteBoostCorp(rec){
     if(fg>0) b+=CFG.weight.corp.white.boostEach;
   } return b;
 }
+
 function scoreNatural(rec){
   const m=CFG.map, w=CFG.weight.natural;
   const R_depGrowth=growth01(rec[m.depNow], rec[m.depPrev],0.4);
@@ -339,8 +357,93 @@ function scoreNatural(rec){
   const R_txnAmtGrowth=growth01(rec[m.nat_txn_amt_3m], rec[m.nat_txn_amt_prev3m],0.6);
   const R_txnCntGrowth=growth01(rec[m.nat_txn_cnt_3m], rec[m.nat_txn_cnt_prev3m],0.6);
   const R_loanUtil=clamp((asNum(rec[m.loan_util])||0),0,1);
-  let R= w.R.depGrowth*R_depGrowth + w.R.aum*R_aum + w.R.vip*R_vip + w.R.degree*R_degree + w.R.salary*R_salary +
-         w.R.prod*R_prod + w.R.txnAmtGrowth*R_txnAmtGrowth + w.R.txnCntGrowth*R_txnCntGrowth + w.R.loanUtil*R_loanUtil;
+  const R_job=jobStabilityScore(rec[m.nat_job]);  // ★ 職業別穩定性分數
+
+  let R= (w.R.job||0)*R_job
+        + w.R.depGrowth*R_depGrowth
+        + w.R.aum*R_aum
+        + w.R.vip*R_vip
+        + w.R.degree*R_degree
+        + w.R.salary*R_salary
+        + w.R.prod*R_prod
+        + w.R.txnAmtGrowth*R_txnAmtGrowth
+        + w.R.txnCntGrowth*R_txnCntGrowth
+        + w.R.loanUtil*R_loanUtil;
+
+  const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
+  const depG=isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+  const A_depDrop=depG<0? Math.min(Math.abs(depG)/0.3,1):0;
+  const A_inactive=clamp((asNum(rec[m.lastDays])-90)/180,0,1);
+  const A_risk=/^(1|true|Y)$/i.test(String(rec[m.blacklist]||''))?1:0;
+  const ebLogin=asNum(rec[m.nat_ebank_login_3m]);
+  const A_ebDormant=isNum(ebLogin)?clamp(1-ebLogin/6,0,1):0;
+  const cardAct=asNum(rec[m.nat_card_active_3m]);
+  const A_cardDormant=isNum(cardAct)?clamp(1-cardAct/3,0,1):0;
+  let A= w.A.depDrop*A_depDrop + w.A.inactive*A_inactive + w.A.riskFlag*A_risk + w.A.ebankDormant*A_ebDormant + w.A.cardDormant*A_cardDormant;
+
+  R += whiteBoostNatural(rec);
+  const R100=pct(R/(Object.values(w.R).reduce((a,b)=>a+b,0)+w.white.boost||1));
+  const A100=pct(A/(Object.values(w.A).reduce((a,b)=>a+b,0)||1));
+  return {R:R100,A:A100};
+}
+/* -----------------------------------------------
+   3) 計分與分類
+   ----------------------------------------------- */
+
+// === 職業別轉換：代碼 → 穩定性分數 ===
+// 高穩定：01 負責人/實際經營者，02 高階主管，05 會計師，06 律師，07 其他專業人員
+// 中穩定：03 一般主管，04 一般職員，12 基金操作員
+// 低穩定：08 佣金收入者，09 學生，10 自由業/其他，11 無業/家管
+// 若代碼未知 → 回傳 0.5（中間值）
+function jobStabilityScore(code){
+  const c = String(code||'').padStart(2,'0');
+  if(['01','02','05','06','07'].includes(c)) return 1.0;
+  if(['03','04','12'].includes(c)) return 0.6;
+  if(['08','09','10','11'].includes(c)) return 0.3;
+  return 0.5;
+}
+
+function whiteBoostNatural(rec){
+  const m=CFG.map; const prod=asNum(rec[m.prodKinds]);
+  const depNow=asNum(rec[m.depNow]); const depPrev=asNum(rec[m.depPrev]);
+  const g=isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+  return (prod<=CFG.weight.natural.white.prodLow && g>0)? CFG.weight.natural.white.boost : 0;
+}
+function whiteBoostCorp(rec){
+  const m=CFG.map; const div=asNum(rec[m.diversity]); let b=0;
+  const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
+  const fxNow=asNum(rec[m.fxNow]), fxPrev=asNum(rec[m.fxPrev]);
+  if(div<=CFG.weight.corp.white.diversityMax){
+    const dg=isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
+    const fg=isNum(fxNow)&&isNum(fxPrev)&&fxPrev>0? (fxNow-fxPrev)/fxPrev : 0;
+    if(dg>0) b+=CFG.weight.corp.white.boostEach;
+    if(fg>0) b+=CFG.weight.corp.white.boostEach;
+  } return b;
+}
+
+function scoreNatural(rec){
+  const m=CFG.map, w=CFG.weight.natural;
+  const R_depGrowth=growth01(rec[m.depNow], rec[m.depPrev],0.4);
+  const R_aum=clamp((asNum(rec[m.aum])||0)/1e8,0,1);
+  const R_vip=tierToScore(rec[m.vip])/100;
+  const R_degree=clamp((asNum(rec[m.degree])||0)*0.25,0,1);
+  const R_salary=clamp((asNum(rec[m.salary])||0)/2e6,0,1);
+  const R_prod=clamp((asNum(rec[m.prodKinds])||0)/4,0,1);
+  const R_txnAmtGrowth=growth01(rec[m.nat_txn_amt_3m], rec[m.nat_txn_amt_prev3m],0.6);
+  const R_txnCntGrowth=growth01(rec[m.nat_txn_cnt_3m], rec[m.nat_txn_cnt_prev3m],0.6);
+  const R_loanUtil=clamp((asNum(rec[m.loan_util])||0),0,1);
+  const R_job=jobStabilityScore(rec[m.nat_job]);  // ★ 職業別穩定性分數
+
+  let R= (w.R.job||0)*R_job
+        + w.R.depGrowth*R_depGrowth
+        + w.R.aum*R_aum
+        + w.R.vip*R_vip
+        + w.R.degree*R_degree
+        + w.R.salary*R_salary
+        + w.R.prod*R_prod
+        + w.R.txnAmtGrowth*R_txnAmtGrowth
+        + w.R.txnCntGrowth*R_txnCntGrowth
+        + w.R.loanUtil*R_loanUtil;
 
   const depNow=asNum(rec[m.depNow]), depPrev=asNum(rec[m.depPrev]);
   const depG=isNum(depNow)&&isNum(depPrev)&&depPrev>0? (depNow-depPrev)/depPrev : 0;
