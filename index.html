@@ -3,18 +3,17 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI 潛力客智選導航｜決策矩陣 (Client-Only)</title>
+<title>AI 潛力客智選導航｜決策矩陣 (JSON 驅動版)</title>
 <style>
   :root{
-    --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;
-    --grid-border:#2a355c;
+    --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;--grid-border:#2a355c;
   }
-  html,body{height:100%;}
+  html,body{height:100%}
   body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto}
   .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
   .hero{display:flex;gap:20px;align-items:center}
   .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:#66e0ff;padding:6px 10px;border-radius:999px;border:1px solid #1d2a4d}
-  h1{font-size:28px;margin:4px 0 8px}
+  h1{font-size:28px;margin:2px 0 6px}
   p.muted{color:var(--muted);margin:0}
   .panel{background:#11162a;border:1px solid #1b2340;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
   .grid{display:grid;gap:16px}
@@ -28,8 +27,8 @@
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .right{margin-left:auto}
   .notice{background:#0f1430;border:1px solid #22306b;padding:10px 12px;border-radius:10px}
-  footer{opacity:.7;margin:24px 0 40px}
   .err{background:#2b0f14;border:1px solid #7a2633;color:#ffd8df;padding:10px 12px;border-radius:10px;margin:10px 0}
+  footer{opacity:.7;margin:24px 0 40px}
 
   /* ======= 矩陣（左：推薦；上：關注） ======= */
   :root{ --side-w:56px;--head-h:56px; --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr; --row-h-H:112px;--row-h-M:112px;--row-h-L:112px; }
@@ -47,9 +46,8 @@
   .cell h4{margin:0 0 6px;font-size:14px;color:#000}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
   .num{font-size:22px;font-weight:700;color:#000}
-
   /* 顏色（兩主色 + 淡底） */
-  .tone-imm { background:#fbc37a; } /* 立即接觸（第2級） */
+  .tone-imm { background:#fbc37a; } /* 立即接觸（第2/3級） */
   .tone-nor { background:#f7a45a; } /* 一般接觸（第1級） */
   .tone-warm { background:#fff1c7; } /* 其它淡底 */
 
@@ -68,61 +66,39 @@
   #diagBox .kvline{display:flex;gap:10px;flex-wrap:wrap}
   #diagBox code{background:#0b1639;border:1px solid #243469;padding:2px 6px;border-radius:6px}
 
-  /* 篩選 chips（重新排序 + 有邊框） */
+  /* 篩選 chips */
   #filters{display:flex;flex-direction:column;gap:8px}
   .chiprow{display:flex;flex-wrap:wrap;gap:8px}
   #filters .chip{background:#12224b;border:1px solid #2a3b6a;color:#e9efff;border-radius:999px;padding:8px 12px;cursor:pointer}
   #filters .chip:hover{filter:brightness(1.08)}
   #filters .chip.active{outline:2px solid var(--brand)}
 
-  /* 派送頁 */
-  .dispatch-wrap{max-width:1280px;margin:24px auto;padding:0 16px}
-  .dispatch-card{background:#f3f6ff;border:1px solid #b9c6eb;border-radius:10px;padding:10px;margin-bottom:12px;color:#00123a}
-  .dispatch-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .dispatch-search{flex:1;min-width:260px}
-  .dispatch-search input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #c7d2f0;background:#fff}
-  .dispatch-table{width:100%;border-collapse:collapse;background:#fff;border:2px solid #9fb3e8}
-  .dispatch-table th,.dispatch-table td{border:1px solid #9fb3e8;padding:8px 10px;vertical-align:top;color:#00123a;background:#fff}
-  .dispatch-table th{background:#e8eeff;font-weight:700;text-align:center}
-  .mini{font-size:12px;color:#33405e}
-  .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #c7d2f0;background:#eef3ff;font-weight:600}
-  .muted2{color:#62739c}
-  .btn.ghost{background:#e9eeff;color:#132a7a;border:1px solid #b9c6eb}
-  .hidden{display:none!important;}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
-
-<section id="page1" style="display:block">
   <div class="wrap">
     <div class="hero">
-      <span class="badge"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.8 1.7 7.2L12 17l-6.2 4.5 1.7-7.2L2 9.5 9 9z"/></svg> AI 潛力客智選導航</span>
+      <span class="badge">JSON 驅動</span>
       <div>
-        <h1>開發潛力名單決策矩陣</h1>
-        <p class="muted">瀏覽器端 <b>只讀你的 JSON 規則</b>（不在前端打分），依 R/A 切點分群並顯示。</p>
+        <h1>開發潛力名單決策矩陣（以 JSON 為主）</h1>
+        <p class="muted">前端不計分，只讀取 <b>CSV 的 R/A</b> 與 <b>JSON 的切點與標籤</b> 來分群。</p>
       </div>
     </div>
 
     <div id="errBox"></div>
-    <!-- 規則檢核面板 -->
     <div id="diagBox"></div>
 
     <div class="panel" id="uploader">
       <div class="row">
-        <label class="file" for="csvRaw">📄 匯入 <b>原始資料</b> CSV（UTF-8）</label>
-        <input id="csvRaw" type="file" accept=".csv" />
-        <label class="file" for="csvScored">📄 匯入 <b>ETL後評分</b> CSV（含 R/A）</label>
-        <input id="csvScored" type="file" accept=".csv" />
+        <label class="file" for="csvFile">📄 匯入 CSV（UTF-8）</label>
+        <input id="csvFile" type="file" accept=".csv" />
         <button class="btn" id="btnClear">清空</button>
         <div class="right kv"><span class="k">有效筆數（已分群，不含 Z）：</span><b id="statRows">0</b></div>
       </div>
       <div class="row" style="margin-top:10px">
-        <div class="notice"><b>兩種匯入：</b>① 原始（無 R/A）→ 顯示 Z 與「未評分」；② ETL 後評分（含 R/A）→ 依 JSON 的 cut/labels 分群。</div>
+        <div class="notice"><b>CSV 最小欄位：</b>客戶代號 / 自然人或法人 / 合規黑名單 / R / A。欄位名稱可用 JSON 的 <code>mapping</code> 調整。</div>
       </div>
-      <details id="guideDetails" style="margin-top:10px">
-        <summary class="btn">CSV 欄位說明與範本（點我展開）</summary>
-        <div id="fieldGuide" style="margin-top:10px"></div>
-      </details>
     </div>
 
     <div class="grid cols-2" style="margin-top:16px">
@@ -160,7 +136,7 @@
         <div class="row" style="margin-top:10px">
           <label class="kv"><span class="k">客群類型：</span>
             <select id="selEntity" class="btn">
-              <option value="auto">自動（依 CSV/欄位推斷）</option>
+              <option value="auto">自動（依欄位推斷）</option>
               <option value="natural">自然人</option>
               <option value="corp">法人</option>
             </select>
@@ -174,12 +150,6 @@
       </div>
     </div>
 
-    <div class="row" style="margin:16px 0 0 0">
-      <button class="btn" id="btnGoDispatch">📌 潛力名單派送</button>
-      <button class="btn ghost" id="btnTableau">📊 Tableau</button>
-      <span class="muted2 mini">（僅 立即接觸（第3級）/立即接觸（第2級）/立即接觸（第1級）/一般接觸（第1級） 派送）</span>
-    </div>
-
     <div class="panel" style="margin-top:16px">
       <h3 style="margin:0 0 8px">計算結果</h3>
       <div style="max-height:360px;overflow:auto;position:relative">
@@ -187,61 +157,40 @@
       </div>
     </div>
 
-    <footer>© 2025 AIT3 Demo • Client-Only • 無資料上傳</footer>
+    <footer>© 2025 AIT3 Demo • Client-Only • 規則與切點 100% 由 JSON 決定</footer>
   </div>
-</section>
-
-<section id="page2" class="hidden">
-  <div class="dispatch-wrap">
-    <div class="row" style="margin-bottom:8px">
-      <button class="btn" onclick="showPage('page1')">← 返回首頁矩陣</button>
-      <div class="right mini muted2">僅顯示：立即接觸（第3級 / 第2級 / 第1級）與 一般接觸（第1級）；RM 狀態與註記儲存在瀏覽器 <b>localStorage</b></div>
-    </div>
-
-    <div class="dispatch-card">
-      <div class="dispatch-toolbar">
-        <div class="dispatch-search"><input id="dispatchSearch" type="search" placeholder="🔎 搜尋 區域/分行/RM/客戶代號/名稱..." oninput="renderDispatch()"></div>
-        <div class="step"><b>＊批次指派/改派：</b> <span class="mini">① 選取名單 → ② 指派 RM</span></div>
-        <button class="btn" onclick="batchAssign()">批次指派/改派</button>
-        <button class="btn ghost" onclick="clearRMFilters()">清除篩選</button>
-      </div>
-    </div>
-
-    <div style="overflow:auto">
-      <table class="dispatch-table" id="dispatchTbl"></table>
-    </div>
-  </div>
-</section>
 
 <script>
-/* -------------------------------------------------
-   0) 只讀規則 JSON（不在前端打分）＋ 多來源備援
-   ------------------------------------------------- */
+/* ========= 1) JSON 規則來源（依序嘗試） =========
+ * 第一個是同倉庫檔案，第二個請改成你的 rules repo raw URL 或 GitHub Pages URL
+ * 例：'https://raw.githubusercontent.com/<帳號>/ait3-rules/main/rules.latest.json'
+ */
 const RULES_SOURCES = [
-  // 正確 raw 路徑（主要）
-  'https://raw.githubusercontent.com/pureplume/ait3-rules/main/rules.latest.json',
-  // CDN 備援
-  'https://cdn.jsdelivr.net/gh/pureplume/ait3-rules@main/rules.latest.json'
+  './rules.latest.json', // 同倉庫備援，可留著
+  'https://raw.githubusercontent.com/pureplume/ait3-rules/main/rules.latest.json' // ← 用這個
 ];
-let RULES = null;
+
+/* ========= 2) 全域狀態 ========= */
+let RULES = null;               // { cut, labels, mapping, edw_order }
 let RULES_URL_INUSE = null;
 let CURRENT_HEADERS = [];
+let dataRows = [], enriched = [], viewFilter = 'ALL';
 
-const UI_TITLES = {
-  HL:'立即接觸（第3級）', HM:'立即接觸（第2級）', HH:'立即接觸（第1級）',
-  ML:'一般接觸（第3級）',  MM:'一般接觸（第2級）',  MH:'一般接觸（第1級）',
-  LL:'後續接觸（第3級）',  LM:'後續接觸（第2級）',  LH:'後續接觸（第1級）',
-  Z :'合規排除'
+/* ========= 3) 小工具 ========= */
+const el = s => document.querySelector(s);
+const fmt = n => (typeof n==='number' && Number.isFinite(n))? n.toLocaleString('zh-TW') : (n??'');
+const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+const isNum = v => typeof v==='number' && Number.isFinite(v);
+const asNum = v => {
+  if(v===''||v==null) return NaN;
+  if(typeof v==='number') return v;
+  return Number(String(v).replace(/[,\s]/g,''));
 };
-const CELL_TONE = {
-  HL:'tone-imm', HM:'tone-imm', HH:'tone-imm',
-  ML:'tone-warm', MM:'tone-warm', MH:'tone-nor',
-  LL:'tone-warm', LM:'tone-warm', LH:'tone-warm'
-};
+const normHeader = h => String(h||'').replace(/^\uFEFF/,'').replace(/\r?\n/g,'').trim();
+function warn(msg){ el('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
+function clearWarn(){ el('#errBox').innerHTML = ''; }
 
-function warn(msg){ document.querySelector('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
-function clearWarn(){ document.querySelector('#errBox').innerHTML = ''; }
-
+/* ========= 4) 載入 JSON 規則（可容忍註解、可尋找內層節點） ========= */
 async function loadRules(){
   let lastErr = '';
   for (const url of RULES_SOURCES){
@@ -249,16 +198,18 @@ async function loadRules(){
       const res = await fetch(url, { cache:'no-store' });
       if(!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
       const text = await res.text();
-
-      // 容忍註解（若檔案含 // 或 /* */）
-      const jsonText = text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*/g,'');
+      // 移除 JS/JSON 註解
+      const jsonText = text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,'');
       const raw = JSON.parse(jsonText);
-
-      // 允許規則放在內層：尋找 cut/labels/mapping
-      const findNode = obj => {
+      // 在根或內層尋找 cut/labels/mapping
+      function findNode(obj){
         if(!obj || typeof obj!=='object') return null;
-        const ok = (obj.cut && obj.labels && obj.mapping);
-        if(ok) return obj;
+        if(obj.cut && obj.labels && obj.mapping) return obj;
+        if(obj.matrix && obj.matrix.cut && obj.matrix.labels) {
+          // 支援舊版：matrix.cut / matrix.labels；mapping 可能在 edw_common
+          const mapping = obj.mapping || obj.edw_common || obj.edw || null;
+          return { cut: obj.matrix.cut, labels: obj.matrix.labels, mapping: mapping||{}, edw_order: obj.edw_order||{} };
+        }
         for(const k of Object.keys(obj)){
           const v = obj[k];
           if(v && typeof v==='object'){
@@ -267,88 +218,77 @@ async function loadRules(){
           }
         }
         return null;
-      };
+      }
       const node = findNode(raw);
       if(!node){ lastErr = '未找到 cut/labels/mapping 節點'; continue; }
-
-      const {cut, labels, mapping} = node;
-      RULES = { cut, labels, mapping, edw_order: node.edw_order || {natural:[], corp:[]} };
+      // 規範化
+      RULES = {
+        cut: node.cut,
+        labels: node.labels,
+        mapping: node.mapping || {},
+        edw_order: node.edw_order || {natural:[], corp:[]}
+      };
       RULES_URL_INUSE = url;
       clearWarn();
       return;
-    }catch(e){
-      lastErr = e.message;
-      continue;
-    }
+    }catch(e){ lastErr = e.message; continue; }
   }
   RULES = null;
-  warn('規則載入失敗：'+ lastErr +'。來源已全部嘗試：<br>'+ RULES_SOURCES.join('<br>'));
+  warn('規則載入失敗：'+ lastErr +'。來源已全部嘗試：\n'+ RULES_SOURCES.join('\n'));
 }
 
-/* -------------------------------------------------
-   1) 工具
-   ------------------------------------------------- */
-const el = s => document.querySelector(s);
-const fmt = n => (typeof n==='number' && Number.isFinite(n))? n.toLocaleString('zh-TW') : (n??'');
-const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-const isNum = v => typeof v==='number' && Number.isFinite(v);
-const asNum = v => {
-  if(v===''||v==null) return NaN;
-  if(typeof v==='number') return v;
-  return Number(String(v).replace(/[,\s]/g,'')); // 允許千分位
-};
-const normHeader = h => String(h||'').replace(/^\uFEFF/,'').replace(/\r?\n/g,'').trim();
-function kNorm(s){
-  return String(s||'').toLowerCase()
-    .replace(/\uFEFF/g,'').replace(/\r?\n/g,'')
-    .replace(/[\s_()（）\-]/g,'').replace(/[\/\\]/g,'/')
-    .trim();
-}
+/* ========= 5) CSV 解析 ========= */
 function csvParse(text){
   const rows=[]; let i=0,field='',row=[],q=false;
-  const push=()=>{row.push(field);field=''};
-  const pushRow=()=>{rows.push(row);row=[]};
+  const push=()=>{row.push(field);field=''}; const pushRow=()=>{rows.push(row);row=[]};
   while(i<text.length){
     const c=text[i++];
     if(q){ if(c=='"'){ if(text[i]=='"'){field+='"';i++;}else q=false; } else field+=c; continue; }
     if(c=='"'){ q=true; continue; }
     if(c===','){ push(); continue; }
-    if(c===`\n`){ push(); pushRow(); continue; }
-    if(c===`\r`){ continue; }
+    if(c==='\n'){ push(); pushRow(); continue; }
+    if(c==='\r'){ continue; }
     field+=c;
   }
   push(); if(row.length) pushRow();
   const hdr=rows.shift(); if(!hdr) return [];
   const headers=hdr.map(normHeader);
   CURRENT_HEADERS = headers;
-  return rows.filter(r=>r.some(x=>x!==''))
-             .map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
+  return rows.filter(r=>r.some(x=>x!=='')).
+         map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
 }
 
-/* -------------------------------------------------
-   2) 只用 JSON 的 cut 來分群（不打分）
-   ------------------------------------------------- */
-function decideCell(R,A){
-  const c=(RULES&&RULES.cut)||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
-  const rc = R>=c.R.hi? 'H' : R>=c.R.mid? 'M' : 'L';
-  const ac = A>=c.A.hi? 'H' : A>=c.A.mid? 'M' : 'L';
-  return rc+ac;
+/* ========= 6) 欄位對應與 Z / R / A 讀取 ========= */
+function kNorm(s){
+  return String(s||'').toLowerCase()
+    .replace(/\uFEFF/g,'').replace(/\r?\n/g,'')
+    .replace(/[\s_()（）\-]/g,'').replace(/[\/\\]/g,'/').trim();
 }
-function getTitle(key){
-  const fromJson = RULES?.labels?.[key]?.title;
-  return fromJson || UI_TITLES[key] || '';
-}
-
-function resolveCore(){  // 與 EDW 標籤對齊（若 JSON 未提供就依表頭推斷）
+function resolveCore(){
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const hset = new Map(CURRENT_HEADERS.map(h=>[kNorm(h),h]));
   const pick = (...cands)=>{ for(const c of cands){ const k=hset.get(kNorm(c)); if(k) return k; } return cands[0]; };
   return {
-    id: pick('客戶代號','客戶ID','id','客編'),
+    id: pick('客戶代號','客戶id','id','客編'),
     name: pick('客戶名稱','名稱','name'),
     entity: pick('自然人/非自然人','客群','entity'),
     blacklist: pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','blacklist')
   };
+}
+function isExcluded(rec){
+  const core = resolveCore();
+  const v = String(rec[core.blacklist]||'').trim();
+  return /^(1|true|y|是)$/i.test(v);
+}
+function inferEntity(rec){
+  const core = resolveCore();
+  const v = (rec[core.entity]??'').toString();
+  const alias = {'自然人':'natural','個人':'natural','法人':'corp','公司':'corp'};
+  const e = alias[v] || v.toLowerCase();
+  if(e==='natural'||e==='corp') return e;
+  // 盲推（若沒有欄位）
+  const hintKeys = ['公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','客戶往來業務類別'];
+  return hintKeys.some(k=>k in rec)? 'corp':'natural';
 }
 function pickRA(rec){
   const mapScore = RULES?.mapping?.score || {};
@@ -366,43 +306,31 @@ function pickRA(rec){
     }
     return null;
   };
-  const rKey = tryFind(keyR, ['R','推薦R','推薦','加權推薦分數','R分數']);
-  const aKey = tryFind(keyA, ['A','關注A','關注','加權關注分數','A分數']);
+  const rKey = tryFind(keyR, ['R','推薦R','加權推薦分數','R分數']);
+  const aKey = tryFind(keyA, ['A','關注A','加權關注分數','A分數']);
   if(!rKey || !aKey) return null;
   const R = asNum(rec[rKey]), A = asNum(rec[aKey]);
   if(!isNum(R) || !isNum(A)) return null;
   return {R: clamp(R,0,100), A: clamp(A,0,100)};
 }
-function pickRevenue(rec){
-  const keys = Object.keys(rec);
-  const idx = new Map(keys.map(k=>[kNorm(k),k]));
-  const cand = ['模擬貢獻金額','模擬貢獻','預估貢獻','revenue','expected_revenue'];
-  for(const c of cand){
-    const k = (c in rec)? c : idx.get(kNorm(c));
-    if(k){ const v=asNum(rec[k]); if(isNum(v)) return v; }
-  }
-  return null;
-}
-function isExcluded(rec){
-  const core = resolveCore();
-  const v = String(rec[core.blacklist]||'');
-  return /^(1|true|y|是)$/i.test(v);
-}
-function inferEntity(rec){
-  const core = resolveCore();
-  const v = (rec[core.entity]??'').toString();
-  const alias = {'自然人':'natural','個人':'natural','法人':'corp','公司':'corp'};
-  const e = alias[v] || v.toLowerCase();
-  if(e==='natural'||e==='corp') return e;
-  const hintKeys = ['公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','客戶往來業務類別'];
-  return hintKeys.some(k=>k in rec)? 'corp':'natural';
-}
 
-/* -------------------------------------------------
-   3) 主流程
-   ------------------------------------------------- */
-let dataRows=[], enriched=[], viewFilter='ALL';
+/* ========= 7) 分群（只用 JSON 切點，不內建計分） ========= */
+function decideCell(R,A){
+  const c=(RULES&&RULES.cut)||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
+  const rc = R>=c.R.hi? 'H' : R>=c.R.mid? 'M' : 'L';
+  const ac = A>=c.A.hi? 'H' : A>=c.A.mid? 'M' : 'L';
+  return rc+ac;
+}
+const UI_TITLES = {
+  HL:'立即接觸（第3級）', HM:'立即接觸（第2級）', HH:'立即接觸（第1級）',
+  ML:'一般接觸（第3級）',  MM:'一般接觸（第2級）',  MH:'一般接觸（第1級）',
+  LL:'後續接觸（第3級）',  LM:'後續接觸（第2級）',  LH:'後續接觸（第1級）',
+  Z :'合規排除'
+};
+const CELL_TONE = { HL:'tone-imm', HM:'tone-imm', HH:'tone-imm', ML:'tone-warm', MM:'tone-warm', MH:'tone-nor', LL:'tone-warm', LM:'tone-warm', LH:'tone-warm' };
+function getTitle(key){ return RULES?.labels?.[key]?.title || UI_TITLES[key] || ''; }
 
+/* ========= 8) 主流程 ========= */
 function process(){
   const forced = el('#selEntity').value;
   const core = resolveCore();
@@ -413,17 +341,13 @@ function process(){
     const R = ra? ra.R : null;
     const A = ra? ra.A : null;
     const cell = (excluded || !ra)? null : decideCell(R, A);
-    const revenue = pickRevenue(rec);
-    return { ...rec, entity, excluded, R, A, cell, revenue };
+    return { ...rec, entity, excluded, R, A, cell };
   });
   render();
-  if(!el('#page2').classList.contains('hidden')) renderDispatch();
-  renderDiagnostics();                           /* 規則檢核面板 */
 }
+function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
 
-/* -------------------------------------------------
-   4) 首頁渲染 + 篩選 chips
-   ------------------------------------------------- */
+/* ========= 9) UI 渲染 ========= */
 function applyHeadersFromCuts(){
   const c=(RULES&&RULES.cut)||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
   el('#ahL').textContent = `關注低 (<${c.A.mid})`;
@@ -435,7 +359,6 @@ function applyHeadersFromCuts(){
 }
 function render(){
   applyHeadersFromCuts();
-
   const byCell = groupBy(enriched.filter(r=>!r.excluded && r.cell), r=>r.cell);
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
   for(const key of order){
@@ -447,42 +370,29 @@ function render(){
     box.innerHTML=`<h4>${title}</h4><div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
     box.onclick=()=>{ viewFilter=key; renderTable(); highlightFilter(); };
   }
-
   const zCount = enriched.filter(r=>r.excluded).length;
   const zbar = el('#zBar');
   if(zbar){
     zbar.innerHTML = `Z｜${getTitle('Z')}　•　筆數 <span class="num">${fmt(zCount)}</span>`;
     zbar.onclick = ()=>{ viewFilter='Z'; renderTable(); highlightFilter(); };
   }
-
-  renderFilterChips();   // 重排、有邊框的 chips
+  renderFilterChips();
   highlightFilter();
   renderTable();
+  renderDiagnostics();
 }
 function renderFilterChips(){
-  const cont = el('#filters');
-  cont.innerHTML = '';
-
-  const mk = (text, val) => {
-    const b=document.createElement('button'); b.className='chip'; b.textContent=text;
-    b.onclick=()=>{viewFilter=val; renderTable(); highlightFilter();};
-    return b;
-  };
-
+  const cont = el('#filters'); cont.innerHTML = '';
+  const mk = (text, val) => { const b=document.createElement('button'); b.className='chip'; b.textContent=text; b.onclick=()=>{viewFilter=val; renderTable(); highlightFilter();}; return b; };
   const rowTop = document.createElement('div'); rowTop.className='chiprow';
   rowTop.appendChild(mk('顯示全部','ALL'));
   ['HL','HM','HH'].forEach(k=>rowTop.appendChild(mk(getTitle(k),k)));
-
   const rowMid = document.createElement('div'); rowMid.className='chiprow';
   ['ML','MM','MH'].forEach(k=>rowMid.appendChild(mk(getTitle(k),k)));
-
   const rowLow = document.createElement('div'); rowLow.className='chiprow';
   ['LL','LM','LH'].forEach(k=>rowLow.appendChild(mk(getTitle(k),k)));
   rowLow.appendChild(mk('合規排除','Z'));
-
-  cont.appendChild(rowTop);
-  cont.appendChild(rowMid);
-  cont.appendChild(rowLow);
+  cont.appendChild(rowTop); cont.appendChild(rowMid); cont.appendChild(rowLow);
 }
 function highlightFilter(){
   [...document.querySelectorAll('#filters .chip')].forEach(b=>{
@@ -491,53 +401,78 @@ function highlightFilter(){
     b.classList.toggle('active', mapped===viewFilter);
   });
 }
-
 function renderTable(){
   const tbl=el('#resultTbl');
-  const headers=['客戶代號','客群','R(推薦)','A(關注)','象限','模擬貢獻金額'];
-
+  const headers=['客戶代號','客群','R(推薦)','A(關注)','象限'];
   let rows;
   if(viewFilter==='Z') rows = enriched.filter(r=>r.excluded);
   else if(viewFilter==='ALL') rows = enriched.filter(r=>!r.excluded);
   else rows = enriched.filter(r=>!r.excluded && r.cell===viewFilter);
-
   const limit=el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
   tbl.innerHTML='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
   const body=document.createElement('tbody');
-
   const core = resolveCore();
   for(const r of rows.slice(0,limit)){
     const title = r.excluded ? getTitle('Z') : (r.cell? getTitle(r.cell) : '未評分');
     const entityTxt = r.entity==='corp'?'法人':'自然人';
-
     const vals = [
       r[core.id],
       entityTxt,
       isNum(r.R)? r.R+'%' : '',
       isNum(r.A)? r.A+'%' : '',
-      r.excluded ? `Z｜${getTitle('Z')}` : title,
-      isNum(r.revenue)? fmt(Math.round(r.revenue)) : ''
+      r.excluded ? `Z｜${getTitle('Z')}` : title
     ];
     const tr=document.createElement('tr');
     tr.innerHTML = vals.map(v=>`<td>${v??''}</td>`).join('');
     body.appendChild(tr);
   }
   tbl.appendChild(body);
-
   el('#statRows').textContent = fmt(enriched.filter(r=>!r.excluded && r.cell).length);
 }
-function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
 
-/* -------------------------------------------------
-   5) 匯入 / 匯出
-   ------------------------------------------------- */
+/* ========= 10) 規則檢核資訊 ========= */
+function buildFieldGuide(){
+  const box = el('#diagBox'); if(!box) return;
+  const core = resolveCore();
+  const sample = dataRows[0]||{};
+  const find = (want, ...alts)=>{
+    const keys = Object.keys(sample);
+    const idx = new Map(keys.map(k=>[kNorm(k),k]));
+    if(want && (want in sample)) return want;
+    if(want && idx.has(kNorm(want))) return idx.get(kNorm(want));
+    for(const a of alts){ if(a in sample) return a; const k=idx.get(kNorm(a)); if(k) return k; }
+    return '未找到';
+  };
+  const rKey = find(RULES?.mapping?.score?.R,'R','推薦R','加權推薦分數','R分數');
+  const aKey = find(RULES?.mapping?.score?.A,'A','關注A','加權關注分數','A分數');
+  const total = dataRows.length;
+  const z = enriched.filter(x=>x.excluded).length;
+  const scored = enriched.filter(x=>x.cell).length;
+  const unscored = total - z - scored;
+  const hit = name => CURRENT_HEADERS.includes(name) ? '✅' : '❌';
+  box.innerHTML = `
+    <div class="notice">
+      <b>規則檢核</b>
+      <div class="kvline">JSON 規則：${RULES?'✅ 已載入':'❌ 失敗（使用骨架）'}</div>
+      <div class="kvline">規則來源：<code>${RULES_URL_INUSE || '（骨架模式）'}</code></div>
+      <div class="kvline">核心欄位：
+        客戶代號 <code>${core.id}</code> ${hit(core.id)} ／
+        客群 <code>${core.entity}</code> ${hit(core.entity)} ／
+        黑名單 <code>${core.blacklist}</code> ${hit(core.blacklist)}
+      </div>
+      <div class="kvline">R 欄位：<code>${rKey}</code>；A 欄位：<code>${aKey}</code></div>
+      <div class="kvline">覆蓋率：可分群 <b>${scored}</b> ／ 總筆數 <b>${total}</b>（Z = ${z}，未評分 = ${unscored}）</div>
+    </div>`;
+}
+
+/* ========= 11) 匯出 ========= */
 function toCSV(arr){
   if(!arr.length) return '';
   const core = resolveCore();
-  const cols=['客戶代號','客群','R','A','象限','模擬貢獻金額'];
+  const cols=['客戶代號','客群','R','A','象限'];
   const hdr=cols.join(',');
   const lines=arr.filter(r=>!r.excluded && r.cell).map(r=>[
-    r[core.id], r.entity, r.R, r.A, getTitle(r.cell), (isNum(r.revenue)?Math.round(r.revenue):'')
+    r[core.id], r.entity, r.R, r.A, getTitle(r.cell)
   ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
   return [hdr, ...lines].join('\n');
 }
@@ -546,264 +481,27 @@ el('#btnDownload').onclick=()=>{
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_result.csv'; a.click();
 };
+
+/* ========= 12) 事件 ========= */
 async function handleCsvInput(file){
   if(!file) return;
   const text=await file.text();
   dataRows=csvParse(text);
-  headerCheck();
   process();
-}
-el('#csvRaw').addEventListener('change', (e)=>handleCsvInput(e.target.files?.[0]));
-el('#csvScored').addEventListener('change', (e)=>handleCsvInput(e.target.files?.[0]));
-el('#btnClear').onclick=()=>{ dataRows=[]; enriched=[]; render(); el('#csvRaw').value=''; el('#csvScored').value=''; };
-
-/* -------------------------------------------------
-   6) CSV 欄位說明（與 EDW 對齊檢查）
-   ------------------------------------------------- */
-function buildFieldGuide(){
-  const box = el('#fieldGuide'); if(!box) return;
-
-  if(!RULES){
-    const core = resolveCore();
-    box.innerHTML = `
-      <div class="notice">
-        <div><b>規則尚未成功載入</b>（顯示最小欄位建議）。</div>
-        <ul>
-          <li>必填：<code>${core.id}</code>（客戶代號）</li>
-          <li>建議：<code>${core.entity}</code>、<code>${core.blacklist}</code></li>
-          <li>ETL 後評分：<code>R</code>、<code>A</code>；模擬貢獻：<code>模擬貢獻金額</code></li>
-        </ul>
-      </div>`;
-    return;
-  }
-
-  const m=RULES.mapping.core || {};
-  const ordNat = RULES.edw_order?.natural || [];
-  const ordCorp = RULES.edw_order?.corp || [];
-  const inCsv = new Set(CURRENT_HEADERS);
-  const mk = (type, name, scope, desc, ok)=>`<tr><td>${type}</td><td>${name}${ok?' ✅':''}</td><td>${scope}</td><td>${desc||''}</td></tr>`;
-
-  let rows = '';
-  rows += mk('必填', m.id||'客戶代號', '共通', '客戶代號', inCsv.has(m.id||'客戶代號'));
-  rows += mk('建議', m.entity||'客群', '共通', '客群（natural/corp 或 自然人/法人）', inCsv.has(m.entity||'客群'));
-  rows += mk('共通', m.blacklist||'合規黑名單', '共通', '合規黑名單(1/0 或 true/false)', inCsv.has(m.blacklist||'合規黑名單'));
-
-  if(ordNat.length){ rows += `<tr><td>—</td><td colspan="3"><b>自然人（依 EDW 順序）</b></td></tr>`;
-    ordNat.forEach(f=>rows += mk('自然人', f, '自然人', '', inCsv.has(f)));
-  }
-  if(ordCorp.length){ rows += `<tr><td>—</td><td colspan="3"><b>法人（依 EDW 順序）</b></td></tr>`;
-    ordCorp.forEach(f=>rows += mk('法人', f, '法人', '', inCsv.has(f)));
-  }
-
-  const keyR = (RULES?.mapping?.score?.R) || 'R';
-  const keyA = (RULES?.mapping?.score?.A) || 'A';
-  rows += mk('ETL評分', keyR, '共通', '推薦分數（0-100）', inCsv.has(keyR));
-  rows += mk('ETL評分', keyA, '共通', '關注分數（0-100）', inCsv.has(keyA));
-  rows += mk('ETL選填', '模擬貢獻金額', '共通', '若提供將顯示於表格與匯出', inCsv.has('模擬貢獻金額'));
-
-  box.innerHTML = `<table class="tbl">
-    <thead><tr><th>必要/對象</th><th>欄位名（CSV 表頭）</th><th>適用</th><th>說明</th></tr></thead>
-    <tbody>${rows}</tbody></table>`;
-}
-
-function headerCheck(){
-  const ra = pickRA(dataRows[0]||{});
-  if(!ra){ warn('目前 CSV 未找到 R/A 欄位（請在 JSON 的 mapping.score 指定，或 CSV 使用「R / A」或「加權推薦分數 / 加權關注分數」欄名）。'); }
-  else { clearWarn(); }
   buildFieldGuide();
-  renderDiagnostics();  // 檢核面板
+  if(!pickRA(dataRows[0]||{})){ warn('CSV 未找到 R/A 欄位（請在 JSON 的 mapping.score 指定，或 CSV 使用「R / A」或「加權推薦分數 / 加權關注分數」欄名）。'); }
+  else { clearWarn(); }
 }
-
-/* -------------------------------------------------
-   7) 規則檢核面板
-   ------------------------------------------------- */
-function resolveScoreKeys(rec){
-  const keys = Object.keys(rec||{});
-  const idx = new Map(keys.map(k=>[k.toLowerCase().replace(/[\s_()（）\-]/g,''),k]));
-  const pick = (want, fallbacks=[])=>{
-    const norm = s=>s?.toLowerCase().replace(/[\s_()（）\-]/g,'');
-    if(want && rec[want]!=null) return want;
-    if(want && idx.has(norm(want))) return idx.get(norm(want));
-    for(const f of fallbacks){
-      if(rec[f]!=null) return f;
-      const k=idx.get(norm(f)); if(k) return k;
-    }
-    return null;
-  };
-  const wantR = RULES?.mapping?.score?.R;
-  const wantA = RULES?.mapping?.score?.A;
-  return {
-    R: pick(wantR, ['R','推薦R','加權推薦分數','R分數']),
-    A: pick(wantA, ['A','關注A','加權關注分數','A分數'])
-  };
-}
-function detectRevenueKey(rec){
-  const cands=['模擬貢獻金額','模擬貢獻','預估貢獻','revenue','expected_revenue'];
-  const keys=Object.keys(rec||{}); const idx=new Map(keys.map(k=>[k.toLowerCase(),k]));
-  for(const c of cands){ if(rec[c]!=null) return c; const k=idx.get(c.toLowerCase()); if(k) return k; }
-  return null;
-}
-function renderDiagnostics(){
-  const core = resolveCore();
-  const sample = dataRows[0]||{};
-  const scoreKeys = resolveScoreKeys(sample);
-  const revKey = detectRevenueKey(sample) || '（未找到）';
-  const total = dataRows.length;
-  const z = enriched.filter(x=>x.excluded).length;
-  const scored = enriched.filter(x=>x.cell).length;
-  const unscored = total - z - scored;
-  const hit = name => CURRENT_HEADERS.includes(name) ? '✅' : '❌';
-
-  el('#diagBox').innerHTML = `
-    <div class="notice">
-      <b>規則檢核</b>
-      <div class="kvline">JSON 規則：${RULES?'✅ 已載入':'❌ 失敗（使用骨架）'}</div>
-      <div class="kvline">規則來源：<code>${RULES_URL_INUSE || '（骨架模式，未載入）'}</code></div>
-      <div class="kvline">核心欄位：
-        客戶代號 <code>${core.id}</code> ${hit(core.id)} ／
-        客群 <code>${core.entity}</code> ${hit(core.entity)} ／
-        黑名單 <code>${core.blacklist}</code> ${hit(core.blacklist)}
-      </div>
-      <div class="kvline">ETL 分數欄位：R = <code>${scoreKeys.R||'未找到'}</code>，A = <code>${scoreKeys.A||'未找到'}</code></div>
-      <div class="kvline">模擬貢獻欄位：<code>${revKey}</code></div>
-      <div class="kvline">覆蓋率：可分群 <b>${scored}</b> ／ 總筆數 <b>${total}</b>（Z = ${z}，未評分 = ${unscored}）</div>
-    </div>`;
-}
-
-/* -------------------------------------------------
-   8) Page 切換與派送
-   ------------------------------------------------- */
-function showPage(id){
-  ['page1','page2'].forEach(pid=>{
-    const sec = el('#'+pid);
-    if(!sec) return;
-    if(pid===id) sec.classList.remove('hidden'); else sec.classList.add('hidden');
-  });
-}
-el('#btnGoDispatch').onclick=()=>{ showPage('page2'); renderDispatch(); };
-el('#btnTableau').onclick=()=>alert('此按鈕僅示意：可連到內部 Tableau 儀表板。');
+el('#csvFile').addEventListener('change', (e)=>handleCsvInput(e.target.files?.[0]));
+el('#btnClear').onclick=()=>{ dataRows=[]; enriched=[]; render(); el('#csvFile').value=''; };
 el('#selEntity').onchange=()=>process();
 el('#selPage').onchange=()=>renderTable();
 
-const DISPATCH_KEY='ait3_dispatch_v2';
-function loadDispatchState(){ try{ return JSON.parse(localStorage.getItem(DISPATCH_KEY)||'{}'); }catch(_){ return {}; } }
-function saveDispatchState(state){ localStorage.setItem(DISPATCH_KEY, JSON.stringify(state)); }
-function getAssignable(){
-  const allow = new Set(['HL','HM','HH','MH']); // 立即接觸 3/2/1 + 一般接觸 1
-  return enriched.filter(r=>!r.excluded && r.cell && allow.has(r.cell));
-}
-function renderDispatch(){
-  const state = loadDispatchState();
-  const q = (el('#dispatchSearch')?.value||'').trim().toLowerCase();
-  const core = resolveCore();
-  const rows = getAssignable().filter(r=>{
-    if(!q) return true;
-    const region = String(r['區域']||r['區域名稱']||'').toLowerCase();
-    const branch = String(r['歸屬分行']||r['分行名稱']||'').toLowerCase();
-    const id = String(r[core.id]||'').toLowerCase();
-    const nm = String(r[core.name]||'').toLowerCase();
-    const rm = String(state[id]?.rm||'').toLowerCase();
-    return [region,branch,id,nm,rm].some(x=>x.includes(q));
-  });
-
-  const tbl = el('#dispatchTbl');
-  const head = `
-    <thead><tr>
-      <th><input type="checkbox" id="chkAll" /></th>
-      <th>客戶代號</th><th>名稱</th><th>象限</th>
-      <th>區域</th><th>分行</th>
-      <th>R</th><th>A</th><th>模擬貢獻</th>
-      <th>RM 指派</th><th>狀態</th><th>備註</th><th>操作</th>
-    </tr></thead>`;
-  const body = document.createElement('tbody');
-
-  for(const r of rows){
-    const id = r[core.id];
-    const title = getTitle(r.cell);
-    const st = state[id]||{};
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input type="checkbox" class="rowchk" data-id="${id}"></td>
-      <td>${id}</td>
-      <td>${r[core.name]||''}</td>
-      <td><span class="tag">${title}</span></td>
-      <td>${r['區域']||r['區域名稱']||''}</td>
-      <td>${r['歸屬分行']||r['分行名稱']||''}</td>
-      <td>${isNum(r.R)?(r.R+'%'):''}</td>
-      <td>${isNum(r.A)?(r.A+'%'):''}</td>
-      <td>${isNum(r.revenue)?fmt(Math.round(r.revenue)):''}</td>
-      <td><input class="rm-input" placeholder="輸入 RM 名稱" value="${st.rm||''}" data-id="${id}"></td>
-      <td>
-        <select class="btn mini status" data-id="${id}">
-          <option value="">未處理</option>
-          <option ${st.status==='追蹤'?'selected':''}>追蹤</option>
-          <option ${st.status==='成功'?'selected':''}>成功</option>
-          <option ${st.status==='失敗'?'selected':''}>失敗</option>
-        </select>
-        <div class="mini muted2">${st.when?('更新：'+new Date(st.when).toLocaleString('zh-TW')):''}</div>
-      </td>
-      <td><textarea class="noteedit" data-id="${id}" placeholder="補充說明…">${st.note||''}</textarea></td>
-      <td><button class="btn mini ghost one-assign" data-id="${id}">指派</button></td>`;
-    body.appendChild(tr);
-  }
-  tbl.innerHTML = head;
-  tbl.appendChild(body);
-
-  const chkAll = el('#chkAll');
-  if(chkAll) chkAll.onchange = ()=>{ [...tbl.querySelectorAll('.rowchk')].forEach(c=>c.checked=chkAll.checked); };
-
-  tbl.querySelectorAll('.one-assign').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.dataset.id;
-      const rowEl = btn.closest('tr');
-      const rm = rowEl.querySelector('.rm-input').value.trim();
-      const status = rowEl.querySelector('.status').value;
-      const note = rowEl.querySelector('.noteedit').value.trim();
-      const s = loadDispatchState();
-      s[id] = { rm, status, note, when: Date.now() };
-      saveDispatchState(s);
-      renderDispatch();
-    };
-  });
-  tbl.querySelectorAll('.rm-input').forEach(inp=>{
-    inp.oninput = ()=>{ const s=loadDispatchState(); const id=inp.dataset.id; s[id]={...(s[id]||{}), rm:inp.value, when:Date.now()}; saveDispatchState(s); };
-  });
-  tbl.querySelectorAll('.status').forEach(sel=>{
-    sel.onchange = ()=>{ const s=loadDispatchState(); const id=sel.dataset.id; s[id]={...(s[id]||{}), status:sel.value, when:Date.now()}; saveDispatchState(s); renderDispatch(); };
-  });
-  tbl.querySelectorAll('.noteedit').forEach(ta=>{
-    ta.oninput = ()=>{ const s=loadDispatchState(); const id=ta.dataset.id; s[id]={...(s[id]||{}), note:ta.value, when:Date.now()}; saveDispatchState(s); };
-  });
-}
-function clearRMFilters(){ el('#dispatchSearch').value=''; renderDispatch(); }
-function batchAssign(){
-  const tbl = el('#dispatchTbl');
-  const ids = [...tbl.querySelectorAll('.rowchk:checked')].map(x=>x.dataset.id);
-  if(!ids.length){ alert('請先勾選名單'); return; }
-  const rm = prompt('輸入要指派/改派的 RM 名稱：','');
-  if(rm==null) return;
-  const state = loadDispatchState();
-  ids.forEach(id=>{
-    const tr = tbl.querySelector(`.rowchk[data-id="${id}"]`)?.closest('tr');
-    const note = tr?.querySelector('.noteedit')?.value?.trim()||'';
-    const status = tr?.querySelector('.status')?.value||'追蹤';
-    state[id] = { rm, status, note, when: Date.now() };
-  });
-  saveDispatchState(state);
-  renderDispatch();
-}
-
-/* -------------------------------------------------
-   9) 初始化
-   ------------------------------------------------- */
-document.getElementById('guideDetails').addEventListener('toggle', e=>{
-  if(e.target.open) buildFieldGuide();
-});
+/* ========= 13) 啟動 ========= */
 document.addEventListener('DOMContentLoaded', async ()=>{
-  await loadRules();      // 讀 JSON（含備援）
-  render();               // 先畫九宮格（即使無資料）
-  buildFieldGuide();      // 顯示欄位對齊
-  renderDiagnostics();    // 規則檢核（含規則來源）
+  await loadRules();
+  render();         // 沒資料時也會畫出矩陣與標題
+  buildFieldGuide();
 });
 </script>
 </body>
