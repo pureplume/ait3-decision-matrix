@@ -215,21 +215,24 @@
 
 <script>
 /* -------------------------------------------------
-   0) 只讀單一規則 JSON（不在前端打分）
+   0) 只讀規則 JSON（不在前端打分）＋ 多來源備援
    ------------------------------------------------- */
-const RULES_URL = 'https://raw.githubusercontent.com/pureplume/ait3-rules/refs/heads/main/rules.latest.json';
+const RULES_SOURCES = [
+  // 正確 raw 路徑（主要）
+  'https://raw.githubusercontent.com/pureplume/ait3-rules/main/rules.latest.json',
+  // CDN 備援
+  'https://cdn.jsdelivr.net/gh/pureplume/ait3-rules@main/rules.latest.json'
+];
 let RULES = null;
+let RULES_URL_INUSE = null;
 let CURRENT_HEADERS = [];
 
-/* UI 固定標題（若 JSON 未提供 labels.title 時採用，與附圖一致） */
 const UI_TITLES = {
   HL:'立即接觸（第3級）', HM:'立即接觸（第2級）', HH:'立即接觸（第1級）',
   ML:'一般接觸（第3級）',  MM:'一般接觸（第2級）',  MH:'一般接觸（第1級）',
   LL:'後續接觸（第3級）',  LM:'後續接觸（第2級）',  LH:'後續接觸（第1級）',
   Z :'合規排除'
 };
-
-/* 顏色：兩主色 + 淡底 */
 const CELL_TONE = {
   HL:'tone-imm', HM:'tone-imm', HH:'tone-imm',
   ML:'tone-warm', MM:'tone-warm', MH:'tone-nor',
@@ -240,37 +243,46 @@ function warn(msg){ document.querySelector('#errBox').innerHTML = '<div class="e
 function clearWarn(){ document.querySelector('#errBox').innerHTML = ''; }
 
 async function loadRules(){
-  try{
-    const res = await fetch(RULES_URL, {cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const raw = await res.json();
+  let lastErr = '';
+  for (const url of RULES_SOURCES){
+    try{
+      const res = await fetch(url, { cache:'no-store' });
+      if(!res.ok) { lastErr = `HTTP ${res.status}`; continue; }
+      const text = await res.text();
 
-    // 找到包含 cut / labels / mapping 的節點
-    const findNode = obj => {
-      if(!obj || typeof obj!=='object') return null;
-      const ok = (obj.cut && obj.labels && obj.mapping);
-      if(ok) return obj;
-      for(const k of Object.keys(obj)){
-        const v = obj[k];
-        if(v && typeof v==='object'){
-          const n = findNode(v);
-          if(n) return n;
+      // 容忍註解（若檔案含 // 或 /* */）
+      const jsonText = text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*/g,'');
+      const raw = JSON.parse(jsonText);
+
+      // 允許規則放在內層：尋找 cut/labels/mapping
+      const findNode = obj => {
+        if(!obj || typeof obj!=='object') return null;
+        const ok = (obj.cut && obj.labels && obj.mapping);
+        if(ok) return obj;
+        for(const k of Object.keys(obj)){
+          const v = obj[k];
+          if(v && typeof v==='object'){
+            const n = findNode(v);
+            if(n) return n;
+          }
         }
-      }
-      return null;
-    };
-    const node = findNode(raw);
-    if(!node) throw new Error('未找到 cut/labels/mapping 節點');
+        return null;
+      };
+      const node = findNode(raw);
+      if(!node){ lastErr = '未找到 cut/labels/mapping 節點'; continue; }
 
-    const {cut, labels, mapping} = node;
-    if(!cut || !labels || !mapping) throw new Error('JSON 缺少必要鍵（cut/labels/mapping）');
-
-    RULES = { cut, labels, mapping, edw_order: node.edw_order || {natural:[], corp:[]} };
-    clearWarn();
-  }catch(e){
-    RULES = null;
-    warn('規則載入失敗：' + e.message + '。將進入骨架模式（仍可載入 CSV、顯示空矩陣與欄位說明）。');
+      const {cut, labels, mapping} = node;
+      RULES = { cut, labels, mapping, edw_order: node.edw_order || {natural:[], corp:[]} };
+      RULES_URL_INUSE = url;
+      clearWarn();
+      return;
+    }catch(e){
+      lastErr = e.message;
+      continue;
+    }
   }
+  RULES = null;
+  warn('規則載入失敗：'+ lastErr +'。來源已全部嘗試：<br>'+ RULES_SOURCES.join('<br>'));
 }
 
 /* -------------------------------------------------
@@ -327,7 +339,7 @@ function getTitle(key){
   return fromJson || UI_TITLES[key] || '';
 }
 
-function resolveCore(){  // 與 EDW 標籤對齊：若 JSON 未提供就依表頭推斷
+function resolveCore(){  // 與 EDW 標籤對齊（若 JSON 未提供就依表頭推斷）
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const hset = new Map(CURRENT_HEADERS.map(h=>[kNorm(h),h]));
   const pick = (...cands)=>{ for(const c of cands){ const k=hset.get(kNorm(c)); if(k) return k; } return cands[0]; };
@@ -443,7 +455,7 @@ function render(){
     zbar.onclick = ()=>{ viewFilter='Z'; renderTable(); highlightFilter(); };
   }
 
-  renderFilterChips();   // ⬅ 新：重排、有邊框的 chips
+  renderFilterChips();   // 重排、有邊框的 chips
   highlightFilter();
   renderTable();
 }
@@ -497,6 +509,7 @@ function renderTable(){
   for(const r of rows.slice(0,limit)){
     const title = r.excluded ? getTitle('Z') : (r.cell? getTitle(r.cell) : '未評分');
     const entityTxt = r.entity==='corp'?'法人':'自然人';
+
     const vals = [
       r[core.id],
       entityTxt,
@@ -645,6 +658,7 @@ function renderDiagnostics(){
     <div class="notice">
       <b>規則檢核</b>
       <div class="kvline">JSON 規則：${RULES?'✅ 已載入':'❌ 失敗（使用骨架）'}</div>
+      <div class="kvline">規則來源：<code>${RULES_URL_INUSE || '（骨架模式，未載入）'}</code></div>
       <div class="kvline">核心欄位：
         客戶代號 <code>${core.id}</code> ${hit(core.id)} ／
         客群 <code>${core.entity}</code> ${hit(core.entity)} ／
@@ -786,10 +800,10 @@ document.getElementById('guideDetails').addEventListener('toggle', e=>{
   if(e.target.open) buildFieldGuide();
 });
 document.addEventListener('DOMContentLoaded', async ()=>{
-  await loadRules();      // 讀 JSON（失敗時用骨架模式）
+  await loadRules();      // 讀 JSON（含備援）
   render();               // 先畫九宮格（即使無資料）
   buildFieldGuide();      // 顯示欄位對齊
-  renderDiagnostics();    // 規則檢核
+  renderDiagnostics();    // 規則檢核（含規則來源）
 });
 </script>
 </body>
