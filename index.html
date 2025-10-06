@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>AI 潛力客智選導航｜決策矩陣 (Client-Only)</title>
 <style>
-  :root{ --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;--grid-border:#2a355c;}
+  :root{
+    --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;
+    --grid-border:#2a355c;
+  }
   html,body{height:100%;}
   body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto}
   .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
@@ -26,9 +29,14 @@
   .right{margin-left:auto}
   .notice{background:#0f1430;border:1px solid #22306b;padding:10px 12px;border-radius:10px}
   footer{opacity:.7;margin:24px 0 40px}
+  .err{background:#2b0f14;border:1px solid #7a2633;color:#ffd8df;padding:10px 12px;border-radius:10px;margin:10px 0}
 
   /* ======= 矩陣（左：推薦；上：關注） ======= */
-  :root{ --side-w:56px;--head-h:56px;--col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr;--row-h-H:112px;--row-h-M:112px;--row-h-L:112px;}
+  :root{
+    --side-w:56px;--head-h:56px;
+    --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr;
+    --row-h-H:112px;--row-h-M:112px;--row-h-L:112px;
+  }
   .matrix-wrapper{
     display:grid;
     grid-template-columns: var(--side-w) var(--col-w-L) var(--col-w-M) var(--col-w-H);
@@ -43,13 +51,16 @@
   .cell h4{margin:0 0 6px;font-size:14px;color:#000}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
   .num{font-size:22px;font-weight:700;color:#000}
-  .cell-A1{background:#f7a45a;} .cell-A2{background:#fbc37a;} .cell-B1{background:#f7a45a;}
-  .cell-C1,.cell-C2,.cell-C3,.cell-C4,.cell-C5{background:#fff1c7;} .cell-B2{background:#fbc37a;}
+
+  /* 顏色：採你圖上的兩種主色調（立即接觸第2級 / 一般接觸第1級） */
+  .tone-imm { background:#fbc37a; } /* 立即接觸（第2級）的底色 */
+  .tone-nor { background:#f7a45a; } /* 一般接觸（第1級）的底色（較深） */
+  .tone-warm { background:#fff1c7; } /* 其它淡底 */
 
   /* Z 合規排除列 */
   .zbar{margin-top:8px;background:#f5f7fa;color:#000;border:1px solid var(--grid-border);border-radius:8px;padding:10px;text-align:center;font-weight:700;cursor:pointer;}
 
-  /* 表格 */
+  /* 表格（sticky 表頭） */
   .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
   .tbl thead th{background:#0f1733;color:#a9b9db;position:sticky;top:0;z-index:2}
   .tbl th,.tbl td{border-bottom:1px solid #233055;padding:8px 10px;text-align:left;white-space:nowrap}
@@ -68,7 +79,6 @@
   .muted2{color:#62739c}
   .btn.ghost{background:#e9eeff;color:#132a7a;border:1px solid #b9c6eb}
   .hidden{display:none!important;}
-  .err{background:#2b0f14;border:1px solid #7a2633;color:#ffd8df;padding:10px 12px;border-radius:10px;margin:10px 0}
 </style>
 </head>
 <body>
@@ -79,7 +89,7 @@
       <span class="badge"><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.8 1.7 7.2L12 17l-6.2 4.5 1.7-7.2L2 9.5 9 9z"/></svg> AI 潛力客智選導航</span>
       <div>
         <h1>開發潛力名單決策矩陣</h1>
-        <p class="muted">瀏覽器端 <b>只讀取你的 JSON 規則</b>（不在前端打分），依 R/A 切點分群並顯示。</p>
+        <p class="muted">瀏覽器端 <b>只讀你的 JSON 規則</b>（不在前端打分），依 R/A 切點分群並顯示。</p>
       </div>
     </div>
 
@@ -155,7 +165,7 @@
     <div class="row" style="margin:16px 0 0 0">
       <button class="btn" id="btnGoDispatch">📌 潛力名單派送</button>
       <button class="btn ghost" id="btnTableau">📊 Tableau</button>
-      <span class="muted2 mini">（僅 A1/A2/B1/B2 派送）</span>
+      <span class="muted2 mini">（僅 立即接觸（第3級）/立即接觸（第2級）/立即接觸（第1級）/一般接觸（第1級） 派送）</span>
     </div>
 
     <div class="panel" style="margin-top:16px">
@@ -173,12 +183,12 @@
   <div class="dispatch-wrap">
     <div class="row" style="margin-bottom:8px">
       <button class="btn" onclick="showPage('page1')">← 返回首頁矩陣</button>
-      <div class="right mini muted2">僅顯示 A1 / A2 / B1 / B2；RM 狀態與註記儲存在瀏覽器 <b>localStorage</b></div>
+      <div class="right mini muted2">僅顯示：立即接觸（第3級 / 第2級 / 第1級）與 一般接觸（第1級）；RM 狀態與註記儲存在瀏覽器 <b>localStorage</b></div>
     </div>
 
     <div class="dispatch-card">
       <div class="dispatch-toolbar">
-        <div class="dispatch-search"><input id="dispatchSearch" type="search" placeholder="🔎 搜尋 區域/分行/RM/客戶ID/名稱..." oninput="renderDispatch()"></div>
+        <div class="dispatch-search"><input id="dispatchSearch" type="search" placeholder="🔎 搜尋 區域/分行/RM/客戶代號/名稱..." oninput="renderDispatch()"></div>
         <div class="step"><b>＊批次指派/改派：</b> <span class="mini">① 選取名單 → ② 指派 RM</span></div>
         <button class="btn" onclick="batchAssign()">批次指派/改派</button>
         <button class="btn ghost" onclick="clearRMFilters()">清除篩選</button>
@@ -199,37 +209,55 @@ const RULES_URL = 'https://raw.githubusercontent.com/pureplume/ait3-rules/refs/h
 let RULES = null;
 let CURRENT_HEADERS = [];
 
-/* UI 固定標題（若 JSON 未提供 labels.title 時採用） */
+/* UI 固定標題（若 JSON 未提供 labels.title 時採用，與附圖一致） */
 const UI_TITLES = {
   HL:'立即接觸（第3級）', HM:'立即接觸（第2級）', HH:'立即接觸（第1級）',
   ML:'一般接觸（第3級）',  MM:'一般接觸（第2級）',  MH:'一般接觸（第1級）',
   LL:'後續接觸（第3級）',  LM:'後續接觸（第2級）',  LH:'後續接觸（第1級）',
   Z :'合規排除'
 };
-/* 顏色 class 對應（保持你原先的 A/B/C 編碼） */
-const CELL_CODE = {HL:'A1',HM:'A2',HH:'B1',ML:'C1',MM:'C2',MH:'B2',LL:'C3',LM:'C4',LH:'C5'};
 
-function warn(msg){ el('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
-function clearWarn(){ el('#errBox').innerHTML=''; }
+/* 預設顯示色調（符合你前面兩色調整） */
+const CELL_TONE = {
+  HL:'tone-imm', HM:'tone-imm', HH:'tone-imm',
+  ML:'tone-warm', MM:'tone-warm', MH:'tone-nor',
+  LL:'tone-warm', LM:'tone-warm', LH:'tone-warm'
+};
+
+function warn(msg){ document.querySelector('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
+function clearWarn(){ document.querySelector('#errBox').innerHTML = ''; }
 
 async function loadRules(){
   try{
     const res = await fetch(RULES_URL, {cache:'no-store'});
     if(!res.ok) throw new Error('HTTP '+res.status);
     const raw = await res.json();
-    const pick = (o,p)=>p.split('.').reduce((x,k)=>x&&x[k], o);
-    const candidate = [raw, pick(raw,'rules'), pick(raw,'matrix'), pick(raw,'decision'), pick(raw,'config')]
-      .find(x=>x && (x.cut || x.labels || x.mapping));
-    if(!candidate) throw new Error('未找到 cut/labels/mapping 節點');
 
-    const {cut, labels, mapping} = candidate;
-    if(!cut || !labels || !mapping?.core) throw new Error('JSON 缺少必要鍵（cut/labels/mapping.core）');
+    // 找到包含 cut / labels / mapping 的節點
+    const findNode = obj => {
+      if(!obj || typeof obj!=='object') return null;
+      const ok = (obj.cut && obj.labels && obj.mapping);
+      if(ok) return obj;
+      for(const k of Object.keys(obj)){
+        const v = obj[k];
+        if(v && typeof v==='object'){
+          const n = findNode(v);
+          if(n) return n;
+        }
+      }
+      return null;
+    };
+    const node = findNode(raw);
+    if(!node) throw new Error('未找到 cut/labels/mapping 節點');
 
-    RULES = { cut, labels, mapping, edw_order: candidate.edw_order || {natural:[], corp:[]} };
+    const {cut, labels, mapping} = node;
+    if(!cut || !labels || !mapping) throw new Error('JSON 缺少必要鍵（cut/labels/mapping）');
+
+    RULES = { cut, labels, mapping, edw_order: node.edw_order || {natural:[], corp:[]} };
     clearWarn();
   }catch(e){
-    warn('規則載入失敗：' + e.message + '。仍可使用骨架模式。');
     RULES = null;
+    warn('規則載入失敗：' + e.message + '。將進入骨架模式（仍可載入 CSV、顯示空矩陣與欄位說明）。');
   }
 }
 
@@ -237,13 +265,13 @@ async function loadRules(){
    1) 工具
    ------------------------------------------------- */
 const el = s => document.querySelector(s);
-const fmt = n => (typeof n==='number'&&Number.isFinite(n))? n.toLocaleString('zh-TW') : (n??'');
+const fmt = n => (typeof n==='number' && Number.isFinite(n))? n.toLocaleString('zh-TW') : (n??'');
 const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
 const isNum = v => typeof v==='number' && Number.isFinite(v);
 const asNum = v => {
   if(v===''||v==null) return NaN;
   if(typeof v==='number') return v;
-  return Number(String(v).replace(/[,%\s]/g,'')); // 允許千分位與 %
+  return Number(String(v).replace(/[,\s]/g,'')); // 允許千分位
 };
 const normHeader = h => String(h||'').replace(/^\uFEFF/,'').replace(/\r?\n/g,'').trim();
 function kNorm(s){
@@ -254,17 +282,23 @@ function kNorm(s){
 }
 function csvParse(text){
   const rows=[]; let i=0,field='',row=[],q=false;
-  const push=()=>{row.push(field);field=''}; const pushRow=()=>{rows.push(row);row=[]};
+  const push=()=>{row.push(field);field=''};
+  const pushRow=()=>{rows.push(row);row=[]};
   while(i<text.length){
-    const c=text[i++]; if(q){ if(c==='"'){ if(text[i]==='"'){field+='"';i++;}else q=false; } else field+=c; continue; }
-    if(c==='"'){ q=true; continue; } if(c===','){ push(); continue; }
-    if(c==='\n'){ push(); pushRow(); continue; } if(c==='\r'){ continue; } field+=c;
+    const c=text[i++];
+    if(q){ if(c=='"'){ if(text[i]=='"'){field+='"';i++;}else q=false; } else field+=c; continue; }
+    if(c=='"'){ q=true; continue; }
+    if(c===','){ push(); continue; }
+    if(c===`\n`){ push(); pushRow(); continue; }
+    if(c===`\r`){ continue; }
+    field+=c;
   }
   push(); if(row.length) pushRow();
   const hdr=rows.shift(); if(!hdr) return [];
-  const headers = hdr.map(normHeader);
+  const headers=hdr.map(normHeader);
   CURRENT_HEADERS = headers;
-  return rows.filter(r=>r.some(x=>x!=='')).map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
+  return rows.filter(r=>r.some(x=>x!==''))
+             .map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
 }
 
 /* -------------------------------------------------
@@ -280,13 +314,14 @@ function getTitle(key){
   const fromJson = RULES?.labels?.[key]?.title;
   return fromJson || UI_TITLES[key] || '';
 }
-function resolveCore(){
+
+function resolveCore(){  // 與 EDW 標籤對齊：若 JSON 未提供就依表頭推斷
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const hset = new Map(CURRENT_HEADERS.map(h=>[kNorm(h),h]));
   const pick = (...cands)=>{ for(const c of cands){ const k=hset.get(kNorm(c)); if(k) return k; } return cands[0]; };
   return {
     id: pick('客戶代號','客戶ID','id','客編'),
-    name: pick('客戶名稱','公司名稱','名稱','name','客戶代號'),
+    name: pick('客戶名稱','名稱','name'),
     entity: pick('自然人/非自然人','客群','entity'),
     blacklist: pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','blacklist')
   };
@@ -295,7 +330,6 @@ function pickRA(rec){
   const mapScore = RULES?.mapping?.score || {};
   const keyR = mapScore.R || null;
   const keyA = mapScore.A || null;
-
   const keys = Object.keys(rec);
   const idx = new Map(keys.map(k=>[kNorm(k),k]));
   const tryFind = (given, fallbacks)=>{
@@ -303,12 +337,14 @@ function pickRA(rec){
     if(given && idx.has(kNorm(given))) return idx.get(kNorm(given));
     for(const fb of fallbacks){
       if(fb in rec) return fb;
-      const k = idx.get(kNorm(fb)); if(k) return k;
+      const k = idx.get(kNorm(fb));
+      if(k) return k;
     }
     return null;
   };
-  const rKey = tryFind(keyR, ['R','推薦R','推薦','加權推薦分數','R分數','r_score']);
-  const aKey = tryFind(keyA, ['A','關注A','關注','加權關注分數','A分數','a_score']);
+  // 允許多種常見命名
+  const rKey = tryFind(keyR, ['R','推薦R','推薦','加權推薦分數','R分數']);
+  const aKey = tryFind(keyA, ['A','關注A','關注','加權關注分數','A分數']);
   if(!rKey || !aKey) return null;
   const R = asNum(rec[rKey]), A = asNum(rec[aKey]);
   if(!isNum(R) || !isNum(A)) return null;
@@ -347,7 +383,6 @@ let dataRows=[], enriched=[], viewFilter='ALL';
 function process(){
   const forced = el('#selEntity').value;
   const core = resolveCore();
-
   enriched = dataRows.map(rec=>{
     const entity = (forced==='auto')? inferEntity(rec) : forced;
     const excluded = isExcluded(rec);
@@ -358,7 +393,6 @@ function process(){
     const revenue = pickRevenue(rec);
     return { ...rec, entity, excluded, R, A, cell, revenue };
   });
-
   render();
   if(!el('#page2').classList.contains('hidden')) renderDispatch();
 }
@@ -380,15 +414,13 @@ function render(){
 
   const byCell = groupBy(enriched.filter(r=>!r.excluded && r.cell), r=>r.cell);
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH'];
-
   for(const key of order){
-    const code = CELL_CODE[key];
     const title = getTitle(key);
     const count=(byCell[key]||[]).length;
-    const box=el('#cell-'+key); if(!box) continue;
-    box.className=`cell cell-${code}`;
-    box.innerHTML=`<h4>${code}｜${title}</h4>
-      <div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
+    const box=el('#cell-'+key);
+    if(!box) continue;
+    box.className=`cell ${CELL_TONE[key]||'tone-warm'}`;
+    box.innerHTML=`<h4>${title}</h4><div class="row"><span class="pill">筆數</span> <span class="num">${fmt(count)}</span></div>`;
     box.onclick=()=>{ viewFilter=key; renderTable(); highlightFilter(); };
   }
 
@@ -399,19 +431,25 @@ function render(){
     zbar.onclick = ()=>{ viewFilter='Z'; renderTable(); highlightFilter(); };
   }
 
-  const f=el('#filters'); f.innerHTML='';
-  const all=document.createElement('button'); all.className='btn'; all.textContent='顯示全部';
-  all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();}; f.appendChild(all);
+  const f=el('#filters');
+  f.innerHTML='';
+  const all=document.createElement('button');
+  all.className='btn'; all.textContent='顯示全部';
+  all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();};
+  f.appendChild(all);
   for(const key of order){
-    const b=document.createElement('button'); b.className='btn'; b.textContent=CELL_CODE[key];
-    b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();}; f.appendChild(b);
+    const b=document.createElement('button'); b.className='btn'; b.textContent=getTitle(key);
+    b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();};
+    f.appendChild(b);
   }
-  const bz=document.createElement('button'); bz.className='btn'; bz.textContent='Z';
-  bz.onclick=()=>{viewFilter='Z'; renderTable(); highlightFilter();}; f.appendChild(bz);
+  const bz=document.createElement('button'); bz.className='btn'; bz.textContent='合規排除';
+  bz.onclick=()=>{viewFilter='Z'; renderTable(); highlightFilter();};
+  f.appendChild(bz);
 
   highlightFilter();
   renderTable();
 }
+
 function highlightFilter(){
   const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH','Z'];
   const btns=[...document.querySelectorAll('#filters .btn')];
@@ -419,9 +457,11 @@ function highlightFilter(){
   const idx=['ALL',...order].indexOf(viewFilter);
   if(idx>=0 && btns[idx]) btns[idx].style.outline='2px solid var(--brand)';
 }
+
 function renderTable(){
   const tbl=el('#resultTbl');
-  const headers=['客戶代號','客群','R(推薦)','A(關注)','矩陣','模擬貢獻'];
+  // 只保留「客戶代號」，顯示「象限」（中文），帶入 CSV 的「模擬貢獻金額」
+  const headers=['客戶代號','客群','R(推薦)','A(關注)','象限','模擬貢獻金額'];
 
   let rows;
   if(viewFilter==='Z') rows = enriched.filter(r=>r.excluded);
@@ -431,19 +471,16 @@ function renderTable(){
   const limit=el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
   tbl.innerHTML='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
   const body=document.createElement('tbody');
-
   const core = resolveCore();
   for(const r of rows.slice(0,limit)){
-    const code = r.cell ? CELL_CODE[r.cell] : '';
-    const title = r.cell ? getTitle(r.cell) : '未評分';
+    const title = r.excluded ? getTitle('Z') : (r.cell? getTitle(r.cell) : '未評分');
     const entityTxt = r.entity==='corp'?'法人':'自然人';
-
     const vals = [
       r[core.id],
       entityTxt,
       isNum(r.R)? r.R+'%' : '',
       isNum(r.A)? r.A+'%' : '',
-      r.excluded ? `Z｜${getTitle('Z')}` : (r.cell? `${code}｜${title}` : '未評分'),
+      r.excluded ? `Z｜${getTitle('Z')}` : title,
       isNum(r.revenue)? fmt(Math.round(r.revenue)) : ''
     ];
     const tr=document.createElement('tr');
@@ -454,7 +491,12 @@ function renderTable(){
 
   el('#statRows').textContent = fmt(enriched.filter(r=>!r.excluded && r.cell).length);
 }
-function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
+
+function groupBy(arr, key){
+  const m={};
+  for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x); }
+  return m;
+}
 
 /* -------------------------------------------------
    5) 匯入 / 匯出
@@ -462,17 +504,26 @@ function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key=
 function toCSV(arr){
   if(!arr.length) return '';
   const core = resolveCore();
-  const cols=['id','entity','R','A','cell','revenue'];
+  const cols=['客戶代號','客群','R','A','象限','模擬貢獻金額'];
   const hdr=cols.join(',');
-  const lines=arr.filter(r=>!r.excluded && r.cell).map(r=>[
-    r[core.id], r.entity, r.R, r.A, r.cell, (isNum(r.revenue)?Math.round(r.revenue):'')
-  ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
+  const lines=arr.filter(r=>!r.excluded && r.cell).map(r=>{
+    return [
+      r[core.id],
+      r.entity,
+      r.R, r.A,
+      getTitle(r.cell),
+      (isNum(r.revenue)?Math.round(r.revenue):'')
+    ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(',');
+  });
   return [hdr, ...lines].join('\n');
 }
 el('#btnDownload').onclick=()=>{
   const csv=toCSV(enriched);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_result.csv'; a.click();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='decision_matrix_result.csv';
+  a.click();
 };
 
 async function handleCsvInput(file){
@@ -506,23 +557,21 @@ function buildFieldGuide(){
     return;
   }
 
-  const m=RULES.mapping.core;
+  const m=RULES.mapping.core || {};
   const ordNat = RULES.edw_order?.natural || [];
   const ordCorp = RULES.edw_order?.corp || [];
   const inCsv = new Set(CURRENT_HEADERS);
   const mk = (type, name, scope, desc, ok)=>`<tr><td>${type}</td><td>${name}${ok?' ✅':''}</td><td>${scope}</td><td>${desc||''}</td></tr>`;
 
   let rows = '';
-  rows += mk('必填', m.id, '共通', '客戶代號', inCsv.has(m.id));
-  rows += mk('建議', m.entity, '共通', '客群（natural/corp 或 自然人/法人）', inCsv.has(m.entity));
-  rows += mk('共通', m.blacklist, '共通', '合規黑名單(1/0 或 true/false)', inCsv.has(m.blacklist));
+  rows += mk('必填', m.id||'客戶代號', '共通', '客戶代號', inCsv.has(m.id||'客戶代號'));
+  rows += mk('建議', m.entity||'客群', '共通', '客群（natural/corp 或 自然人/法人）', inCsv.has(m.entity||'客群'));
+  rows += mk('共通', m.blacklist||'合規黑名單', '共通', '合規黑名單(1/0 或 true/false)', inCsv.has(m.blacklist||'合規黑名單'));
 
-  if(ordNat.length){
-    rows += `<tr><td>—</td><td colspan="3"><b>自然人（依 EDW 順序）</b></td></tr>`;
+  if(ordNat.length){ rows += `<tr><td>—</td><td colspan="3"><b>自然人（依 EDW 順序）</b></td></tr>`;
     ordNat.forEach(f=>rows += mk('自然人', f, '自然人', '', inCsv.has(f)));
   }
-  if(ordCorp.length){
-    rows += `<tr><td>—</td><td colspan="3"><b>法人（依 EDW 順序）</b></td></tr>`;
+  if(ordCorp.length){ rows += `<tr><td>—</td><td colspan="3"><b>法人（依 EDW 順序）</b></td></tr>`;
     ordCorp.forEach(f=>rows += mk('法人', f, '法人', '', inCsv.has(f)));
   }
 
@@ -536,9 +585,10 @@ function buildFieldGuide(){
     <thead><tr><th>必要/對象</th><th>欄位名（CSV 表頭）</th><th>適用</th><th>說明</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
 }
+
 function headerCheck(){
   const ra = pickRA(dataRows[0]||{});
-  if(!ra){ warn('目前 CSV 未找到 R/A 欄位（請在 JSON 的 mapping.score 指定，或 CSV 使用「加權推薦分數 / 加權關注分數」或 R/A 欄名）。'); }
+  if(!ra){ warn('目前 CSV 未找到 R/A 欄位（請在 JSON 的 mapping.score 指定，或 CSV 使用「R / A」或「加權推薦分數 / 加權關注分數」欄名）。'); }
   else { clearWarn(); }
   buildFieldGuide();
 }
@@ -555,7 +605,6 @@ function showPage(id){
 }
 el('#btnGoDispatch').onclick=()=>{ showPage('page2'); renderDispatch(); };
 el('#btnTableau').onclick=()=>alert('此按鈕僅示意：可連到內部 Tableau 儀表板。');
-
 el('#selEntity').onchange=()=>process();
 el('#selPage').onchange=()=>renderTable();
 
@@ -563,14 +612,14 @@ const DISPATCH_KEY='ait3_dispatch_v2';
 function loadDispatchState(){ try{ return JSON.parse(localStorage.getItem(DISPATCH_KEY)||'{}'); }catch(_){ return {}; } }
 function saveDispatchState(state){ localStorage.setItem(DISPATCH_KEY, JSON.stringify(state)); }
 function getAssignable(){
-  const allow = new Set(['HL','HM','HH','MH']); // A1/A2/B1/B2
+  // 立即接觸 3/2/1 級 + 一般接觸 1 級
+  const allow = new Set(['HL','HM','HH','MH']);
   return enriched.filter(r=>!r.excluded && r.cell && allow.has(r.cell));
 }
 function renderDispatch(){
   const state = loadDispatchState();
   const q = (el('#dispatchSearch')?.value||'').trim().toLowerCase();
   const core = resolveCore();
-
   const rows = getAssignable().filter(r=>{
     if(!q) return true;
     const region = String(r['區域']||r['區域名稱']||'').toLowerCase();
@@ -587,14 +636,13 @@ function renderDispatch(){
       <th><input type="checkbox" id="chkAll" /></th>
       <th>客戶代號</th><th>名稱</th><th>象限</th>
       <th>區域</th><th>分行</th>
-      <th>推薦R</th><th>關注A</th><th>模擬貢獻</th>
+      <th>R</th><th>A</th><th>模擬貢獻</th>
       <th>RM 指派</th><th>狀態</th><th>備註</th><th>操作</th>
     </tr></thead>`;
   const body = document.createElement('tbody');
 
   for(const r of rows){
     const id = r[core.id];
-    const code = CELL_CODE[r.cell];
     const title = getTitle(r.cell);
     const st = state[id]||{};
     const tr = document.createElement('tr');
@@ -602,7 +650,7 @@ function renderDispatch(){
       <td><input type="checkbox" class="rowchk" data-id="${id}"></td>
       <td>${id}</td>
       <td>${r[core.name]||''}</td>
-      <td><span class="tag">${code}</span> <span class="mini muted2">${title}</span></td>
+      <td><span class="tag">${title}</span></td>
       <td>${r['區域']||r['區域名稱']||''}</td>
       <td>${r['歸屬分行']||r['分行名稱']||''}</td>
       <td>${isNum(r.R)?(r.R+'%'):''}</td>
@@ -676,9 +724,9 @@ document.getElementById('guideDetails').addEventListener('toggle', e=>{
   if(e.target.open) buildFieldGuide();
 });
 document.addEventListener('DOMContentLoaded', async ()=>{
-  await loadRules();          // 讀 JSON（失敗時使用骨架）
-  render();                   // 先畫九宮格（即使無資料）
-  buildFieldGuide();          // 可對齊 EDW 與當前 CSV
+  await loadRules();      // 讀 JSON（失敗時用骨架模式）
+  render();               // 先畫九宮格（即使無資料）
+  buildFieldGuide();      // 顯示欄位對齊與是否在 CSV
 });
 </script>
 </body>
