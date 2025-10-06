@@ -32,11 +32,7 @@
   .err{background:#2b0f14;border:1px solid #7a2633;color:#ffd8df;padding:10px 12px;border-radius:10px;margin:10px 0}
 
   /* ======= 矩陣（左：推薦；上：關注） ======= */
-  :root{
-    --side-w:56px;--head-h:56px;
-    --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr;
-    --row-h-H:112px;--row-h-M:112px;--row-h-L:112px;
-  }
+  :root{ --side-w:56px;--head-h:56px; --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr; --row-h-H:112px;--row-h-M:112px;--row-h-L:112px; }
   .matrix-wrapper{
     display:grid;
     grid-template-columns: var(--side-w) var(--col-w-L) var(--col-w-M) var(--col-w-H);
@@ -52,9 +48,9 @@
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
   .num{font-size:22px;font-weight:700;color:#000}
 
-  /* 顏色：採你圖上的兩種主色調（立即接觸第2級 / 一般接觸第1級） */
-  .tone-imm { background:#fbc37a; } /* 立即接觸（第2級）的底色 */
-  .tone-nor { background:#f7a45a; } /* 一般接觸（第1級）的底色（較深） */
+  /* 顏色（兩主色 + 淡底） */
+  .tone-imm { background:#fbc37a; } /* 立即接觸（第2級） */
+  .tone-nor { background:#f7a45a; } /* 一般接觸（第1級） */
   .tone-warm { background:#fff1c7; } /* 其它淡底 */
 
   /* Z 合規排除列 */
@@ -62,8 +58,22 @@
 
   /* 表格（sticky 表頭） */
   .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
-  .tbl thead th{background:#0f1733;color:#a9b9db;position:sticky;top:0;z-index:2}
+  .tbl thead th{
+    background:#0f1733;color:#a9b9db;position:sticky;top:0;z-index:3;
+    box-shadow:0 2px 0 rgba(0,0,0,.25);
+  }
   .tbl th,.tbl td{border-bottom:1px solid #233055;padding:8px 10px;text-align:left;white-space:nowrap}
+
+  /* 規則檢核面板 */
+  #diagBox .kvline{display:flex;gap:10px;flex-wrap:wrap}
+  #diagBox code{background:#0b1639;border:1px solid #243469;padding:2px 6px;border-radius:6px}
+
+  /* 篩選 chips（重新排序 + 有邊框） */
+  #filters{display:flex;flex-direction:column;gap:8px}
+  .chiprow{display:flex;flex-wrap:wrap;gap:8px}
+  #filters .chip{background:#12224b;border:1px solid #2a3b6a;color:#e9efff;border-radius:999px;padding:8px 12px;cursor:pointer}
+  #filters .chip:hover{filter:brightness(1.08)}
+  #filters .chip.active{outline:2px solid var(--brand)}
 
   /* 派送頁 */
   .dispatch-wrap{max-width:1280px;margin:24px auto;padding:0 16px}
@@ -94,6 +104,8 @@
     </div>
 
     <div id="errBox"></div>
+    <!-- 規則檢核面板 -->
+    <div id="diagBox"></div>
 
     <div class="panel" id="uploader">
       <div class="row">
@@ -144,7 +156,7 @@
 
       <div class="panel">
         <h3 style="margin:0 0 8px">篩選</h3>
-        <div class="chips" id="filters"></div>
+        <div id="filters"></div>
         <div class="row" style="margin-top:10px">
           <label class="kv"><span class="k">客群類型：</span>
             <select id="selEntity" class="btn">
@@ -217,7 +229,7 @@ const UI_TITLES = {
   Z :'合規排除'
 };
 
-/* 預設顯示色調（符合你前面兩色調整） */
+/* 顏色：兩主色 + 淡底 */
 const CELL_TONE = {
   HL:'tone-imm', HM:'tone-imm', HH:'tone-imm',
   ML:'tone-warm', MM:'tone-warm', MH:'tone-nor',
@@ -342,7 +354,6 @@ function pickRA(rec){
     }
     return null;
   };
-  // 允許多種常見命名
   const rKey = tryFind(keyR, ['R','推薦R','推薦','加權推薦分數','R分數']);
   const aKey = tryFind(keyA, ['A','關注A','關注','加權關注分數','A分數']);
   if(!rKey || !aKey) return null;
@@ -395,10 +406,11 @@ function process(){
   });
   render();
   if(!el('#page2').classList.contains('hidden')) renderDispatch();
+  renderDiagnostics();                           /* 規則檢核面板 */
 }
 
 /* -------------------------------------------------
-   4) 首頁渲染
+   4) 首頁渲染 + 篩選 chips
    ------------------------------------------------- */
 function applyHeadersFromCuts(){
   const c=(RULES&&RULES.cut)||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
@@ -431,36 +443,45 @@ function render(){
     zbar.onclick = ()=>{ viewFilter='Z'; renderTable(); highlightFilter(); };
   }
 
-  const f=el('#filters');
-  f.innerHTML='';
-  const all=document.createElement('button');
-  all.className='btn'; all.textContent='顯示全部';
-  all.onclick=()=>{viewFilter='ALL'; renderTable(); highlightFilter();};
-  f.appendChild(all);
-  for(const key of order){
-    const b=document.createElement('button'); b.className='btn'; b.textContent=getTitle(key);
-    b.onclick=()=>{viewFilter=key; renderTable(); highlightFilter();};
-    f.appendChild(b);
-  }
-  const bz=document.createElement('button'); bz.className='btn'; bz.textContent='合規排除';
-  bz.onclick=()=>{viewFilter='Z'; renderTable(); highlightFilter();};
-  f.appendChild(bz);
-
+  renderFilterChips();   // ⬅ 新：重排、有邊框的 chips
   highlightFilter();
   renderTable();
 }
+function renderFilterChips(){
+  const cont = el('#filters');
+  cont.innerHTML = '';
 
+  const mk = (text, val) => {
+    const b=document.createElement('button'); b.className='chip'; b.textContent=text;
+    b.onclick=()=>{viewFilter=val; renderTable(); highlightFilter();};
+    return b;
+  };
+
+  const rowTop = document.createElement('div'); rowTop.className='chiprow';
+  rowTop.appendChild(mk('顯示全部','ALL'));
+  ['HL','HM','HH'].forEach(k=>rowTop.appendChild(mk(getTitle(k),k)));
+
+  const rowMid = document.createElement('div'); rowMid.className='chiprow';
+  ['ML','MM','MH'].forEach(k=>rowMid.appendChild(mk(getTitle(k),k)));
+
+  const rowLow = document.createElement('div'); rowLow.className='chiprow';
+  ['LL','LM','LH'].forEach(k=>rowLow.appendChild(mk(getTitle(k),k)));
+  rowLow.appendChild(mk('合規排除','Z'));
+
+  cont.appendChild(rowTop);
+  cont.appendChild(rowMid);
+  cont.appendChild(rowLow);
+}
 function highlightFilter(){
-  const order=['HL','HM','HH','ML','MM','MH','LL','LM','LH','Z'];
-  const btns=[...document.querySelectorAll('#filters .btn')];
-  btns.forEach(b=>b.style.outline='none');
-  const idx=['ALL',...order].indexOf(viewFilter);
-  if(idx>=0 && btns[idx]) btns[idx].style.outline='2px solid var(--brand)';
+  [...document.querySelectorAll('#filters .chip')].forEach(b=>{
+    const val = b.textContent==='顯示全部'?'ALL': (b.textContent==='合規排除'?'Z':null);
+    const mapped = val || Object.entries(UI_TITLES).find(([k,v])=>v===b.textContent)?.[0];
+    b.classList.toggle('active', mapped===viewFilter);
+  });
 }
 
 function renderTable(){
   const tbl=el('#resultTbl');
-  // 只保留「客戶代號」，顯示「象限」（中文），帶入 CSV 的「模擬貢獻金額」
   const headers=['客戶代號','客群','R(推薦)','A(關注)','象限','模擬貢獻金額'];
 
   let rows;
@@ -471,6 +492,7 @@ function renderTable(){
   const limit=el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
   tbl.innerHTML='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
   const body=document.createElement('tbody');
+
   const core = resolveCore();
   for(const r of rows.slice(0,limit)){
     const title = r.excluded ? getTitle('Z') : (r.cell? getTitle(r.cell) : '未評分');
@@ -491,12 +513,7 @@ function renderTable(){
 
   el('#statRows').textContent = fmt(enriched.filter(r=>!r.excluded && r.cell).length);
 }
-
-function groupBy(arr, key){
-  const m={};
-  for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x); }
-  return m;
-}
+function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
 
 /* -------------------------------------------------
    5) 匯入 / 匯出
@@ -506,26 +523,16 @@ function toCSV(arr){
   const core = resolveCore();
   const cols=['客戶代號','客群','R','A','象限','模擬貢獻金額'];
   const hdr=cols.join(',');
-  const lines=arr.filter(r=>!r.excluded && r.cell).map(r=>{
-    return [
-      r[core.id],
-      r.entity,
-      r.R, r.A,
-      getTitle(r.cell),
-      (isNum(r.revenue)?Math.round(r.revenue):'')
-    ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(',');
-  });
+  const lines=arr.filter(r=>!r.excluded && r.cell).map(r=>[
+    r[core.id], r.entity, r.R, r.A, getTitle(r.cell), (isNum(r.revenue)?Math.round(r.revenue):'')
+  ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
   return [hdr, ...lines].join('\n');
 }
 el('#btnDownload').onclick=()=>{
   const csv=toCSV(enriched);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='decision_matrix_result.csv';
-  a.click();
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_result.csv'; a.click();
 };
-
 async function handleCsvInput(file){
   if(!file) return;
   const text=await file.text();
@@ -591,10 +598,66 @@ function headerCheck(){
   if(!ra){ warn('目前 CSV 未找到 R/A 欄位（請在 JSON 的 mapping.score 指定，或 CSV 使用「R / A」或「加權推薦分數 / 加權關注分數」欄名）。'); }
   else { clearWarn(); }
   buildFieldGuide();
+  renderDiagnostics();  // 檢核面板
 }
 
 /* -------------------------------------------------
-   7) Page 切換與派送
+   7) 規則檢核面板
+   ------------------------------------------------- */
+function resolveScoreKeys(rec){
+  const keys = Object.keys(rec||{});
+  const idx = new Map(keys.map(k=>[k.toLowerCase().replace(/[\s_()（）\-]/g,''),k]));
+  const pick = (want, fallbacks=[])=>{
+    const norm = s=>s?.toLowerCase().replace(/[\s_()（）\-]/g,'');
+    if(want && rec[want]!=null) return want;
+    if(want && idx.has(norm(want))) return idx.get(norm(want));
+    for(const f of fallbacks){
+      if(rec[f]!=null) return f;
+      const k=idx.get(norm(f)); if(k) return k;
+    }
+    return null;
+  };
+  const wantR = RULES?.mapping?.score?.R;
+  const wantA = RULES?.mapping?.score?.A;
+  return {
+    R: pick(wantR, ['R','推薦R','加權推薦分數','R分數']),
+    A: pick(wantA, ['A','關注A','加權關注分數','A分數'])
+  };
+}
+function detectRevenueKey(rec){
+  const cands=['模擬貢獻金額','模擬貢獻','預估貢獻','revenue','expected_revenue'];
+  const keys=Object.keys(rec||{}); const idx=new Map(keys.map(k=>[k.toLowerCase(),k]));
+  for(const c of cands){ if(rec[c]!=null) return c; const k=idx.get(c.toLowerCase()); if(k) return k; }
+  return null;
+}
+function renderDiagnostics(){
+  const core = resolveCore();
+  const sample = dataRows[0]||{};
+  const scoreKeys = resolveScoreKeys(sample);
+  const revKey = detectRevenueKey(sample) || '（未找到）';
+  const total = dataRows.length;
+  const z = enriched.filter(x=>x.excluded).length;
+  const scored = enriched.filter(x=>x.cell).length;
+  const unscored = total - z - scored;
+  const hit = name => CURRENT_HEADERS.includes(name) ? '✅' : '❌';
+
+  el('#diagBox').innerHTML = `
+    <div class="notice">
+      <b>規則檢核</b>
+      <div class="kvline">JSON 規則：${RULES?'✅ 已載入':'❌ 失敗（使用骨架）'}</div>
+      <div class="kvline">核心欄位：
+        客戶代號 <code>${core.id}</code> ${hit(core.id)} ／
+        客群 <code>${core.entity}</code> ${hit(core.entity)} ／
+        黑名單 <code>${core.blacklist}</code> ${hit(core.blacklist)}
+      </div>
+      <div class="kvline">ETL 分數欄位：R = <code>${scoreKeys.R||'未找到'}</code>，A = <code>${scoreKeys.A||'未找到'}</code></div>
+      <div class="kvline">模擬貢獻欄位：<code>${revKey}</code></div>
+      <div class="kvline">覆蓋率：可分群 <b>${scored}</b> ／ 總筆數 <b>${total}</b>（Z = ${z}，未評分 = ${unscored}）</div>
+    </div>`;
+}
+
+/* -------------------------------------------------
+   8) Page 切換與派送
    ------------------------------------------------- */
 function showPage(id){
   ['page1','page2'].forEach(pid=>{
@@ -612,8 +675,7 @@ const DISPATCH_KEY='ait3_dispatch_v2';
 function loadDispatchState(){ try{ return JSON.parse(localStorage.getItem(DISPATCH_KEY)||'{}'); }catch(_){ return {}; } }
 function saveDispatchState(state){ localStorage.setItem(DISPATCH_KEY, JSON.stringify(state)); }
 function getAssignable(){
-  // 立即接觸 3/2/1 級 + 一般接觸 1 級
-  const allow = new Set(['HL','HM','HH','MH']);
+  const allow = new Set(['HL','HM','HH','MH']); // 立即接觸 3/2/1 + 一般接觸 1
   return enriched.filter(r=>!r.excluded && r.cell && allow.has(r.cell));
 }
 function renderDispatch(){
@@ -718,7 +780,7 @@ function batchAssign(){
 }
 
 /* -------------------------------------------------
-   8) 初始化
+   9) 初始化
    ------------------------------------------------- */
 document.getElementById('guideDetails').addEventListener('toggle', e=>{
   if(e.target.open) buildFieldGuide();
@@ -726,7 +788,8 @@ document.getElementById('guideDetails').addEventListener('toggle', e=>{
 document.addEventListener('DOMContentLoaded', async ()=>{
   await loadRules();      // 讀 JSON（失敗時用骨架模式）
   render();               // 先畫九宮格（即使無資料）
-  buildFieldGuide();      // 顯示欄位對齊與是否在 CSV
+  buildFieldGuide();      // 顯示欄位對齊
+  renderDiagnostics();    // 規則檢核
 });
 </script>
 </body>
