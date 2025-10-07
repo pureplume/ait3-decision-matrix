@@ -1,471 +1,470 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AI 潛力客智選導航｜前端計分（JSON 規則驅動）</title>
-<style>
-  :root{--bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;--grid-border:#2a355c}
-  html,body{height:100%}
-  body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto}
-  .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
-  .hero{display:flex;gap:20px;align-items:center}
-  .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:#66e0ff;padding:6px 10px;border-radius:999px;border:1px solid #1d2a4d}
-  h1{font-size:28px;margin:2px 0 6px}
-  p.muted{color:var(--muted);margin:0}
-  .panel{background:#11162a;border:1px solid #1b2340;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
-  .grid{display:grid;gap:16px}
-  .grid.cols-2{grid-template-columns:1fr 1fr}
-  .btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;background:#1a2347;color:#e9efff;cursor:pointer}
-  .btn:hover{filter:brightness(1.1)}
-  input[type=file]{display:none}
-  label.file{display:inline-flex;gap:10px;align-items:center;background:#132142;border:1px dashed #2a3b6a;padding:12px 14px;border-radius:12px;cursor:pointer}
-  .kv{display:flex;gap:10px;align-items:center}
-  .kv .k{color:#98a8c6}
-  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .right{margin-left:auto}
-  .notice{background:#0f1430;border:1px solid #22306b;padding:10px 12px;border-radius:10px}
-  .err{background:#2b0f14;border:1px solid #7a2633;color:#ffd8df;padding:10px 12px;border-radius:10px;margin:10px 0}
-  footer{opacity:.7;margin:24px 0 40px}
-  /* 矩陣 */
-  :root{ --side-w:56px;--head-h:56px; --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr; --row-h-H:112px;--row-h-M:112px;--row-h-L:112px; }
-  .matrix-wrapper{
-    display:grid; grid-template-columns: var(--side-w) 1fr 1fr 1fr; grid-template-rows: var(--head-h) 112px 112px 112px;
-    border:1px solid var(--grid-border);border-radius:12px;overflow:hidden;background:#fff;
-  }
-  .matrix-header,.matrix-side{display:flex;align-items:center;justify-content:center;background:#f5f7fa;color:#000;font-weight:700;border-right:1px solid var(--grid-border);border-bottom:1px solid var(--grid-border)}
-  .cell{border-right:1px solid var(--grid-border);border-bottom:1px solid var(--grid-border);padding:10px;background:#fff}
-  .cell h4{margin:0 0 6px;font-size:14px;color:#000}
-  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
-  .num{font-size:22px;font-weight:700;color:#000}
-  .tone-imm{background:#fbc37a} .tone-nor{background:#f7a45a} .tone-warm{background:#fff1c7}
-  .zbar{margin-top:8px;background:#f5f7fa;color:#000;border:1px solid var(--grid-border);border-radius:8px;padding:10px;text-align:center;font-weight:700;cursor:pointer}
-  /* 表格 */
-  .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
-  .tbl thead th{background:#0f1733;color:#a9b9db;position:sticky;top:0;z-index:3;box-shadow:0 2px 0 rgba(0,0,0,.25)}
-  .tbl th,.tbl td{border-bottom:1px solid #233055;padding:8px 10px;text-align:left;white-space:nowrap}
-  /* 診斷 & 篩選 */
-  #diagBox .kvline{display:flex;gap:10px;flex-wrap:wrap}
-  #diagBox code{background:#0b1639;border:1px solid #243469;padding:2px 6px;border-radius:6px}
-  #filters{display:flex;flex-direction:column;gap:8px}
-  .chiprow{display:flex;flex-wrap:wrap;gap:8px}
-  #filters .chip{background:#12224b;border:1px solid #2a3b6a;color:#e9efff;border-radius:999px;padding:8px 12px;cursor:pointer}
-  #filters .chip:hover{filter:brightness(1.08)}
-  #filters .chip.active{outline:2px solid var(--brand)}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI 潛力客智選導航｜決策矩陣 (Client-Only)</title>
+  <style>
+    :root{
+      --bg:#0b1020;--panel:#11162a;--muted:#7a89a8;--text:#f2f5ff;--brand:#66e0ff;--chip:#233055;
+      --grid-border:#2a355c;--ok:#29cc7a;--warn:#ffb84d;--bad:#ff6b6b;
+    }
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b1020,#0a0f1e 40%,#0b0f1c);
+      color:var(--text);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 16px}
+    header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+    .title{font-weight:700;font-size:20px;letter-spacing:.2px;margin-right:auto}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px}
+    .btn,.file{background:var(--panel);color:var(--text);border:1px solid #263058;border-radius:10px;
+      padding:8px 12px;cursor:pointer}
+    .btn:hover{box-shadow:0 0 0 2px #1b2544 inset}
+    .text{background:var(--panel);border:1px solid #263058;border-radius:10px;color:var(--text);
+      padding:8px 12px;min-width:360px}
+    .panel{background:rgba(17,22,42,.7);border:1px solid #233055;border-radius:16px;padding:16px;margin:14px 0}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+    .cell{border:1px solid var(--grid-border);border-radius:12px;padding:12px;min-height:84px;
+      background:rgba(35,48,85,.25)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:600;font-size:12px}
+    .ok{background:rgba(41,204,122,.2);border:1px solid var(--ok);color:#c7f7de}
+    .warn{background:rgba(255,184,77,.2);border:1px solid var(--warn);color:#ffe3b3}
+    .bad{background:rgba(255,107,107,.2);border:1px solid var(--bad);color:#ffd0d0}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    th,td{padding:10px;border-bottom:1px solid #243056;text-align:left}
+    th{position:sticky;top:0;background:#0e1428;z-index:1}
+    .scroll{max-height:480px;overflow:auto;border:1px solid #233055;border-radius:12px}
+    .muted{color:var(--muted)}
+    .badge{padding:2px 8px;border:1px solid #39508f;border-radius:999px;background:#1a2341;font-size:12px}
+    .note{font-size:12px;color:#a8b4d6;margin-top:4px}
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:980px){.split{grid-template-columns:1fr}}
+  </style>
+  <!-- CSV 解析、Excel 產出 -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <div class="hero">
-      <span class="badge">前端計分｜JSON 規則</span>
+<div class="wrap">
+  <header>
+    <div class="title">AI 潛力客智選導航｜決策矩陣</div>
+    <div class="toolbar">
+      <input id="csvFile" type="file" class="file" accept=".csv" />
+      <button class="btn" id="btnDemo">載入示範資料</button>
+      <button class="btn" id="btnClear">清空</button>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="split">
       <div>
-        <h1>開發潛力名單決策矩陣（HTML 依 JSON 計算 R/A）</h1>
-        <p class="muted">上傳任意 CSV（不用帶 R/A），本頁會依 JSON 規則自動計分與分群；若 JSON 沒提供計分規則，則 fallback 讀 CSV 的 R/A。</p>
-      </div>
-    </div>
-
-    <div id="errBox"></div>
-    <div id="diagBox" class="panel"></div>
-
-    <div class="panel" id="uploader">
-      <div class="row">
-        <label class="file" for="csvFile">📄 匯入 CSV（UTF-8）</label>
-        <input id="csvFile" type="file" accept=".csv" />
-        <button class="btn" id="btnClear">清空</button>
-        <div class="right kv">
-          <span class="k">統計：</span>
-          <span>已分群 <b id="statScored">0</b></span>
-          <span>未評分 <b id="statUnscored">0</b></span>
-          <span>Z <b id="statZ">0</b></span>
+        <div class="muted" style="margin-bottom:6px">JSON 規則來源</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="rulesUrl" class="text" placeholder="貼上規則網址（ex: https://raw.githubusercontent.com/.../rules.latest.json）">
+          <button class="btn" id="btnLoadRules">讀取規則</button>
+          <span id="rulesStatus" class="badge">未載入規則（使用內建門檻）</span>
         </div>
+        <div class="note">支援 feature 的 <code>key</code> 與 <code>aliases</code>；若 CSV 暫無對應欄位，會安全地視為 0 或不計。</div>
       </div>
-      <div class="row" style="margin-top:10px">
-        <div class="notice">
-          <b>最小欄位：</b>客戶代號（必填），其它欄位名稱需和 JSON 的 features.key 對得上（或用 mapping.alias 對應）。
+      <div>
+        <div class="muted" style="margin-bottom:6px">輸出</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn" id="btnXLSX">匯出結果 Excel</button>
+          <span class="note">匯出包含原始欄位 + <b>R_score, A_score, matrix_key/code/title</b>。</span>
         </div>
       </div>
     </div>
-
-    <div class="grid cols-2" style="margin-top:16px">
-      <div class="panel">
-        <div class="row"><h3 style="margin:0">九宮格決策摘要</h3><button class="btn right" id="btnDownload">匯出結果（已分群）</button></div>
-        <div class="matrix-wrapper">
-          <div class="matrix-header"></div>
-          <div class="matrix-header" id="ahL">關注低</div>
-          <div class="matrix-header" id="ahM">關注中</div>
-          <div class="matrix-header" id="ahH">關注高</div>
-
-          <div class="matrix-side" id="rhH">推薦高</div>
-          <div class="cell" id="cell-HL"></div>
-          <div class="cell" id="cell-HM"></div>
-          <div class="cell" id="cell-HH"></div>
-
-          <div class="matrix-side" id="rhM">推薦中</div>
-          <div class="cell" id="cell-ML"></div>
-          <div class="cell" id="cell-MM"></div>
-          <div class="cell" id="cell-MH"></div>
-
-          <div class="matrix-side" id="rhL">推薦低</div>
-          <div class="cell" id="cell-LL"></div>
-          <div class="cell" id="cell-LM"></div>
-          <div class="cell" id="cell-LH"></div>
-        </div>
-        <div class="zbar" id="zBar"></div>
-      </div>
-
-      <div class="panel">
-        <h3 style="margin:0 0 8px">篩選</h3>
-        <div id="filters"></div>
-        <div class="row" style="margin-top:10px">
-          <label class="kv"><span class="k">客群類型：</span>
-            <select id="selEntity" class="btn">
-              <option value="auto">自動（依欄位推斷）</option>
-              <option value="natural">自然人</option>
-              <option value="corp">法人</option>
-            </select>
-          </label>
-          <label class="kv"><span class="k">顯示筆數：</span>
-            <select id="selPage" class="btn">
-              <option>50</option><option>100</option><option>200</option><option>全部</option>
-            </select>
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel" style="margin-top:16px">
-      <h3 style="margin:0 0 8px">資料列表</h3>
-      <div style="max-height:360px;overflow:auto;position:relative">
-        <table class="tbl" id="resultTbl"></table>
-      </div>
-    </div>
-
-    <footer>© 2025 AIT3 • 前端計分 • JSON 為唯一規則來源（可 fallback CSV R/A）</footer>
   </div>
 
+  <div class="panel">
+    <div class="muted" style="margin-bottom:6px">九宮格門檻（若未載入 JSON，採此預設）</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <span class="badge">R：Hi ≥ <span id="rHi">70</span>；Mid ≥ <span id="rMid">40</span></span>
+      <span class="badge">A：Hi ≥ <span id="aHi">70</span>；Mid ≥ <span id="aMid">40</span></span>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div class="cell"><span class="pill ok">HH → A1</span><div class="note">高推薦 × 高關注</div></div>
+      <div class="cell"><span class="pill warn">HM → A2</span><div class="note">高推薦 × 中關注</div></div>
+      <div class="cell"><span class="pill warn">HL → B1</span><div class="note">高推薦 × 低關注</div></div>
+      <div class="cell"><span class="pill warn">MH → B2</span><div class="note">中推薦 × 高關注</div></div>
+      <div class="cell"><span class="pill">MM → 一般接觸</span></div>
+      <div class="cell"><span class="pill">ML → 一般接觸</span></div>
+      <div class="cell"><span class="pill">LH → 一般接觸</span></div>
+      <div class="cell"><span class="pill">LM → 一般接觸</span></div>
+      <div class="cell"><span class="pill">LL → 一般接觸</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="muted">計算結果（已含 R/A 與矩陣）</div>
+      <div class="note" id="countInfo">0 筆</div>
+    </div>
+    <div class="scroll"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
 <script>
-/* ===== 0) JSON 規則來源（依序嘗試） ===== */
-const RULES_SOURCES = [
-  './rules.latest.json',
-  'https://raw.githubusercontent.com/pureplume/ait3-rules/main/rules.latest.json' // ← 改成你的規則 URL
-];
+/* ===============================
+   0) 基本設定：標籤與矩陣名稱
+   =============================== */
+const CFG = {
+  labels: {
+    "HH":{code:"A1",title:"優先接觸（第1級）"},
+    "HM":{code:"A2",title:"優先接觸（第2級）"},
+    "HL":{code:"B1",title:"一般接觸（第1級）"},
+    "MH":{code:"B2",title:"一般接觸（第1級）"},
+    "MM":{code:"C1",title:"一般接觸（第2級）"},
+    "ML":{code:"C2",title:"一般接觸（第2級）"},
+    "LH":{code:"C3",title:"一般接觸（第2級）"},
+    "LM":{code:"C4",title:"一般接觸（第2級）"},
+    "LL":{code:"C4",title:"一般接觸（第2級）"},
+    "Z" :{code:"Z", title:"排除（不派送）"}
+  },
+  cut: {R:{hi:70,mid:40}, A:{hi:70,mid:40}}
+};
 
-/* ===== 1) 狀態 & 小工具 ===== */
-let RULES=null, RULES_URL_INUSE=null, CURRENT_HEADERS=[];
-let dataRows=[], enriched=[], viewFilter='ALL';
+// 全域資料：原始 rows、加工 enriched
+let raw = [];           // 由 CSV / Demo 取得
+let enriched = [];      // 加工後（含 R/A/matrix）
+let RULES = {loaded:false, matrix:null, nat:[], corp:[]}; // JSON 規則
 
-const el=s=>document.querySelector(s);
-const fmt=n=> (typeof n==='number'&&Number.isFinite(n))? n.toLocaleString('zh-TW') : (n??'');
-const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const isNum=v=> typeof v==='number'&&Number.isFinite(v);
-const asNum=v=>{ if(v===''||v==null) return NaN; if(typeof v==='number') return v; const s=String(v).replace(/[,\s%]/g,''); return Number(s); };
-const normHeader=h=>String(h||'').replace(/^\uFEFF/,'').replace(/\r?\n/g,'').trim();
-const kNorm=s=>String(s||'').toLowerCase().replace(/\uFEFF/g,'').replace(/\r?\n/g,'').replace(/[\s_()（）\-]/g,'').replace(/[\/\\]/g,'/').trim();
-function warn(msg){ el('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
-function clearWarn(){ el('#errBox').innerHTML = ''; }
+/* ===============================
+   1) 小工具
+   =============================== */
+const $ = sel => document.querySelector(sel);
+const byKeys = (obj, order) => {
+  const out={}; for(const k of order){ if(k in obj) out[k]=obj[k]; }
+  for(const k of Object.keys(obj)){ if(!(k in out)) out[k]=obj[k]; }
+  return out;
+};
+function render(){
+  const tbl = $("#tbl"), thead=tbl.tHead||tbl.createTHead(), tbody=tbl.tBodies[0]||tbl.createTBody();
+  tbody.innerHTML = ""; thead.innerHTML = "";
+  if(!enriched.length){ $("#countInfo").textContent="0 筆"; return; }
 
-/* ===== 2) 載入 JSON（支援新舊結構；允許註解） ===== */
-async function loadRules(){
-  let lastErr='';
-  for(const url of RULES_SOURCES){
-    try{
-      const res=await fetch(url+'?v='+Date.now(),{cache:'no-store'}); if(!res.ok){lastErr='HTTP '+res.status; continue;}
-      const text=await res.text();
-      const raw=JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,''));
-      const node=(function find(o){
-        if(!o||typeof o!=='object') return null;
-        if(o.cut && o.labels && (o.compute || o.mapping)) return o; // 新版
-        if(o.matrix && o.matrix.cut && o.matrix.labels){ // 舊版
-          const mapping=o.mapping||o.edw_common||o.edw||{};
-          return {cut:o.matrix.cut,labels:o.matrix.labels,mapping,compute:o.compute||null,edw_order:o.edw_order||{}};
-        }
-        for(const k of Object.keys(o)){ const n=find(o[k]); if(n) return n; }
-        return null;
-      })(raw);
-      if(!node){ lastErr='未找到 cut/labels'; continue; }
-      RULES={ cut:node.cut, labels:node.labels||{}, mapping:node.mapping||{}, compute:node.compute||null, edw_order:node.edw_order||{} };
-      RULES_URL_INUSE=url; clearWarn(); return;
-    }catch(e){ lastErr=e.message; continue; }
+  const cols = Object.keys(enriched[0]);
+  // 置頂常用欄位
+  const headOrder = ['id','name','entity','entity_text','R','A','cell','cell_code','cell_title'];
+  const orderedCols = cols.sort((a,b)=> headOrder.indexOf(a)===-1? (headOrder.indexOf(b)===-1?0:1) : -1);
+
+  const tr = thead.insertRow();
+  orderedCols.forEach(k=>{ const th=document.createElement('th'); th.textContent=k; tr.appendChild(th); });
+
+  for(const r of enriched){
+    const row = tbody.insertRow();
+    for(const k of orderedCols){
+      const td = row.insertCell();
+      td.textContent = (r[k]??"");
+    }
   }
-  RULES=null; warn('規則載入失敗：'+lastErr+'。來源已全部嘗試：\n'+RULES_SOURCES.join('\n'));
+  $("#countInfo").textContent = `${enriched.length} 筆`;
 }
 
-/* ===== 3) CSV 解析 ===== */
-function csvParse(text){
-  const rows=[]; let i=0,field='',row=[],q=false;
-  const push=()=>{row.push(field);field=''}; const pushRow=()=>{rows.push(row);row=[]};
-  while(i<text.length){
-    const c=text[i++]; if(q){ if(c=='"'){ if(text[i]=='"'){field+='"';i++;}else q=false; } else field+=c; continue; }
-    if(c=='"'){ q=true; continue; } if(c===','){ push(); continue; }
-    if(c==='\n'){ push(); pushRow(); continue; } if(c==='\r'){ continue; } field+=c;
-  } push(); if(row.length) pushRow();
-  const hdr=rows.shift(); if(!hdr) return [];
-  const headers=hdr.map(normHeader); CURRENT_HEADERS=headers;
-  return rows.filter(r=>r.some(x=>x!=='')).map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
+/* ===============================
+   2) CSV 載入（檔案或 Demo）
+   =============================== */
+$("#csvFile").addEventListener("change", ev=>{
+  const f = ev.target.files?.[0]; if(!f) return;
+  Papa.parse(f, {
+    header:true, skipEmptyLines:true, dynamicTyping:true,
+    complete: (res)=>{
+      raw = res.data.map(normalizeRow);
+      process();
+    }
+  });
+});
+
+$("#btnDemo").onclick = ()=>{
+  // 簡易示範 12 筆（自然人 / 法人 各 6），欄位與映射一致
+  const pick=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+  const N=6, C=6; const out=[];
+  for(let i=0;i<N;i++){
+    out.push({
+      id:`N${String(i+1).padStart(3,'0')}`, name:`NAT_${String(i+1).padStart(3,'0')}`, entity:"natural",
+      avg_dep_3m: Math.floor(Math.random()*12_000_00)/100,  // 月均存款(3m)
+      avg_dep_prev3m: Math.floor(Math.random()*12_000_00)/100,
+      last_txn_days: Math.floor(Math.random()*180),
+      salary: Math.floor(Math.random()*2_000_000)+400_000,
+      prod_kinds: Math.floor(Math.random()*6)+1,
+      loan_util: Math.floor(Math.random()*100),             // 本期放款動用率(%) 0~100
+      _loan_util_prev: Math.floor(Math.random()*100),       // 上期 (示範)
+      ebank_login_3m: Math.floor(Math.random()*40),
+      compliance_blacklist: 0
+    });
+  }
+  for(let i=0;i<C;i++){
+    out.push({
+      id:`C${String(i+1).padStart(3,'0')}`, name:`CORP_${String(i+1).padStart(3,'0')}`, entity:"corp",
+      company_age_years: Math.floor(Math.random()*30)+1,
+      corp_txn_amt_3m: Math.floor(Math.random()*50_000_000),
+      biz_diversity: Math.floor(Math.random()*6)+1,
+      credit_rating: pick(['A','BBB','BB','B']),
+      avg_dep_3m: Math.floor(Math.random()*30_000_00)/100,
+      avg_dep_prev3m: Math.floor(Math.random()*30_000_00)/100,
+      fx_3m: Math.floor(Math.random()*3_000_000),
+      fx_prev3m: Math.floor(Math.random()*3_000_000),
+      compliance_blacklist: 0
+    });
+  }
+  raw = out.map(normalizeRow);
+  process();
+};
+
+$("#btnClear").onclick = ()=>{
+  raw=[]; enriched=[]; render();
+};
+
+/* ===============================
+   3) 規則載入（支援 key 與 aliases）
+   =============================== */
+async function loadRules(url){
+  if(!url){ alert('請先填 JSON 規則網址'); return; }
+  try{
+    const r = await fetch(url, {cache:'no-store'});
+    if(!r.ok) throw new Error(r.status+' '+r.statusText);
+    const j = await r.json();
+    RULES.matrix = j?.matrix || null;
+    RULES.nat    = (j?.natural?.features||[]).map(withAliases);
+    RULES.corp   = (j?.corporate?.features||[]).map(withAliases);
+    RULES.loaded = true;
+    $("#rulesStatus").textContent = '已載入規則（依 JSON 權重計分）';
+    // 若 JSON 有 cut，覆蓋 UI 門檻顯示
+    const cut = RULES.matrix?.cut;
+    if(cut){
+      $("#rHi").textContent = cut.R?.hi ?? 70;
+      $("#rMid").textContent = cut.R?.mid ?? 40;
+      $("#aHi").textContent = cut.A?.hi ?? 70;
+      $("#aMid").textContent = cut.A?.mid ?? 40;
+    }
+    process();
+  }catch(e){
+    console.error(e);
+    alert('讀取規則失敗，維持內建門檻。');
+  }
+}
+$("#btnLoadRules").onclick = ()=> loadRules($("#rulesUrl").value?.trim());
+
+function withAliases(f){
+  return {...f, aliases: Array.isArray(f.aliases)? f.aliases.map(x=>String(x).trim()):[]};
 }
 
-/* ===== 4) 欄位對應 & 常用欄位 ===== */
-function coreMap(){
-  if(RULES?.mapping?.core) return RULES.mapping.core;
-  const h=new Map(CURRENT_HEADERS.map(x=>[kNorm(x),x]));
-  const pick=(...c)=>{ for(const s of c){ const k=h.get(kNorm(s)); if(k) return k; } return c[0]; };
-  return { id:pick('客戶代號','客戶id','id','客編'),
-           name:pick('客戶名稱','名稱','name'),
-           entity:pick('自然人/非自然人','客群','entity'),
-           blacklist:pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','blacklist') };
-}
-function isExcluded(rec){ const cm=coreMap(); const v=String(rec[cm.blacklist]||'').trim(); return /^(1|true|y|是)$/i.test(v); }
-function inferEntity(rec){
-  const cm=coreMap(); const v=(rec[cm.entity]??'').toString();
-  const alias={'自然人':'natural','個人':'natural','法人':'corp','公司':'corp'}; const e=alias[v]||v.toLowerCase();
-  if(e==='natural'||e==='corp') return e;
-  const hints=['公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','客戶往來業務類別']; return hints.some(k=>k in rec)?'corp':'natural';
+/* ===============================
+   4) 欄位正規化與映射
+   - 這層做「EDW/CSV 欄位名 → 統一內部鍵」的對齊
+   - 若你 CSV 欄名日後更動，只要改這裡
+   =============================== */
+function normalizeRow(r){
+  // 統一必要欄位（id/name/entity）
+  const entity = (String(r.entity||r.ENTITY||r.ENTITY_TYPE||'natural').toLowerCase().includes('corp')) ? 'corp' : 'natural';
+  return {
+    ...r,
+    id: r.id ?? r.CUST_ID ?? r.customer_id ?? '',
+    name: r.name ?? r.CUST_NAME ?? r.customer_name ?? '',
+    entity
+  };
 }
 
-/* ===== 5) 前端計分引擎 =====
- * JSON 期待格式（彈性，擇一即可）：
- * compute.R.features: [{ key, weight, rule:[{if, score}], alias?:[], preprocess?:'percent'|'int' }]
- * compute.A.features: 同上
- * 也支援 table: {value: score}、bins: [{min?, max?, score}]
- * 若 compute 缺失，fallback 讀 CSV 的 R/A（mapping.score 或欄名 R/A）
- */
-function pickField(rec, key, alias=[]) {
-  if(key in rec) return key;
-  const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k]));
-  const tryList=[key, ...alias];
-  for(const name of tryList){ const k=idx.get(kNorm(name)); if(k) return k; }
-  return null;
-}
-function preprocessVal(v, pre){
-  let x=asNum(v);
-  if(!isNum(x)) return NaN;
-  if(pre==='percent'){ // 0~1 或 0~100% 皆可
-    if(String(v).includes('%')) x = x/100;
-    if(x>1) x = x/100;
+// JSON feature.key → CSV 欄位名對應（可依你 EDW 對齊調整）
+const NAT_FIELD_MAP = {
+  // === 自然人 ===
+  "annual_income":"salary",
+  "product_diversity_score":"prod_kinds",
+  "avg_balance_qoq_change":"avg_dep_3m",     // 會用 (avg_dep_3m - avg_dep_prev3m)
+  "days_since_last_txn":"last_txn_days",
+  // 你先前改名：放款額度動用率變化 → 個人放款_額度動用變化率
+  // 若 JSON 將 key 改成「個人放款_額度動用變化率」，請把該名稱加到 feature.aliases
+  "loan_util_change_pp":"_loan_util_pp",
+  "credit_util_change_pp":null,              // 自然人已刪除此欄 → 不計
+  "ebank_interactions_3m_yoy":null,          // 缺去年同期 → 先 0
+  "txn_freq_change":null,                    // 同上
+  "edd_uncooperative":null,
+  "compliance_exclusion":"compliance_blacklist"
+};
+
+const CORP_FIELD_MAP = {
+  // === 法人 ===
+  "annual_turnover":"corp_txn_amt_3m",
+  "company_age":"company_age_years",
+  "strategic_industry":null,                 // 若是 Y/N，請在 CSV 提供欄位或在 JSON 換規則型別
+  "corp_credit_rating":"credit_rating",
+  "product_diversity_score":"biz_diversity",
+  "avg_balance_qoq_change":"avg_dep_3m",
+  // 你先前改名：放款額度動用率變化/授信額度動用率變化 → 企金放款_額度動用率 / 企金授信_額度動用率（本期）
+  // 若 JSON 用新名，請把新名放 aliases；這裡示範以變化率（pp）需要「本期−上期」才算，CSV 如無上期→先 0
+  "loan_util_change_pp":null,
+  "credit_util_change_pp":null,
+  "fx_turnover_change":"_fx_turnover_pct",   // 由 fx_3m / fx_prev3m 推導
+  "ebank_interactions_3m_yoy":null,
+  "edd_uncooperative":null,
+  "compliance_exclusion":"compliance_blacklist"
+};
+
+// 給打分階段取值（支援 key 或 aliases）
+function valOf(rec, feature, entity){
+  const key = resolveKey(feature, entity);
+  // 特例處理
+  if(key==="avg_balance_qoq_change"){
+    const now = +rec['avg_dep_3m']||0, prev = +rec['avg_dep_prev3m']||0;
+    return now - prev; // 金額差
   }
-  if(pre==='int') x = Math.round(x);
-  return x;
-}
-function evalCond(x, cond){
-  // 支援：>=, <=, >, <, ==, !=, between a..b / [a,b]
-  if(!isNum(x)) return false;
-  const s=String(cond).trim();
-  const m1=s.match(/^(>=|<=|>|<|==|=|!=)\s*(-?\d+(\.\d+)?)$/);
-  if(m1){
-    const op=m1[1], val=Number(m1[2]);
-    if(op==='>=') return x>=val;
-    if(op==='<=') return x<=val;
-    if(op==='>')  return x> val;
-    if(op=== '<') return x< val;
-    if(op==='=='||op==='=') return x===val;
-    if(op==='!=') return x!==val;
+  if(key==="loan_util_change_pp"){
+    const now = +rec['loan_util']; const prev= +rec['_loan_util_prev']||now;
+    if(!(now===now)) return 0;
+    return (now - prev); // 已是百分點差（本期% − 上期%）
   }
-  const m2=s.match(/^(between|range)\s+(-?\d+(\.\d+)?)\s*(\.{2}|,|~|to|-)\s*(-?\d+(\.\d+)?)$/i);
-  if(m2){ const a=Number(m2[2]), b=Number(m2[5]); return x>=Math.min(a,b) && x<=Math.max(a,b); }
-  const m3=s.match(/^\[\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\]$/); // [a,b]
-  if(m3){ const a=Number(m3[1]), b=Number(m3[3]); return x>=a && x<=b; }
-  return false;
-}
-function scoreByRule(x, feature){
-  // rule: [{if:'>=0.3', score:1}, ...] 取第一個命中；或 bins/table
-  if(!isNum(x)) return 0;
-  if(Array.isArray(feature.rule)){
-    for(const r of feature.rule){ if(r && evalCond(x, r.if)) return Number(r.score)||0; }
-    return 0;
+  if(key==="fx_turnover_change"){
+    const now=+rec['fx_3m']||0, prev=+rec['fx_prev3m']||0;
+    return prev>0? (now-prev)/prev : 0; // 比例變化
   }
-  if(Array.isArray(feature.bins)){
-    for(const b of feature.bins){ const lo=('min' in b)? Number(b.min):-Infinity; const hi=('max' in b)? Number(b.max):Infinity; if(x>=lo && x<=hi) return Number(b.score)||0; }
-    return 0;
-  }
-  if(feature.table && typeof feature.table==='object'){
-    const key = String(x); return Number(feature.table[key])||0;
-  }
-  return 0;
-}
-function computeScore(rec, block){ // block= RULES.compute.R 或 .A
-  if(!block || !Array.isArray(block.features) || !block.features.length) return null;
-  let sum=0, wsum=0;
-  for(const f of block.features){
-    const field = pickField(rec, f.key, f.alias||[]);
-    const raw = field? rec[field] : null;
-    const val = preprocessVal(raw, f.preprocess);
-    const s = scoreByRule(val, f); // 0..1
-    const w = Number(f.weight)||0;
-    sum += s * w;
-    wsum += w;
-  }
-  if(wsum<=0) return null;
-  const scaled = 100 * (sum / wsum);
-  return clamp(Math.round(scaled), 0, 100);
+  const map = entity==='corp'? CORP_FIELD_MAP : NAT_FIELD_MAP;
+  const col = map[key] ?? null;
+  if(!col) return null;
+  const v = rec[col];
+  if(v===''||v==null) return null;
+  // 自動轉數值
+  return (+v===+v)? +v : v;
 }
 
-/* fallback：CSV 直接提供 R/A 時 */
-function pickRAfromCSV(rec){
-  const ms=RULES?.mapping?.score||{};
-  const keys=Object.keys(rec); const idx=new Map(keys.map(k=>[kNorm(k),k]));
-  const tryKey=(given, fb)=>{ if(given&&rec[given]!=null) return given; if(given&&idx.has(kNorm(given))) return idx.get(kNorm(given)); for(const x of fb){ if(rec[x]!=null) return x; const k=idx.get(kNorm(x)); if(k) return k; } return null; };
-  const rKey=tryKey(ms.R, ['R','推薦分數','推薦R','加權推薦分數','R分數']);
-  const aKey=tryKey(ms.A, ['A','關注分數','關注A','加權關注分數','A分數']);
-  if(!rKey||!aKey) return null;
-  const R=asNum(rec[rKey]), A=asNum(rec[aKey]); if(!isNum(R)||!isNum(A)) return null;
-  return { R:clamp(R,0,100), A:clamp(A,0,100) };
+function resolveKey(feature, entity){
+  // 先嘗試 feature.key，在 FIELD_MAP 是否存在；否則試 aliases
+  const base = feature.key;
+  const map = entity==='corp'? CORP_FIELD_MAP : NAT_FIELD_MAP;
+  if(base in map || base==="avg_balance_qoq_change" || base==="loan_util_change_pp" || base==="fx_turnover_change") return base;
+  for(const alias of (feature.aliases||[])){
+    if(alias in map) return alias;
+    // 允許常見中文別名（去空白）
+    const a = String(alias).trim();
+    if(a in map) return a;
+  }
+  // 找不到就回原 key（可能是純邏輯特例）
+  return base;
 }
 
-/* ===== 6) 分群（依 cut） ===== */
-function decideCell(R,A){
-  const c=RULES?.cut||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
-  const rc=R>=c.R.hi?'H': R>=c.R.mid?'M':'L';
-  const ac=A>=c.A.hi?'H': A>=c.A.mid?'M':'L';
+/* ===============================
+   5) JSON 驅動打分（完整型別）
+   =============================== */
+const binsAmt=(v,b)=>{ if(v==null||!b?.length) return 0; let x=+v; for(const [th,sc] of [...b].sort((a,b)=>b[0]-a[0])) if(x>=+th) return +sc; return +b[b.length-1][1]; };
+const stepGE =(v,s)=>{ if(v==null||!s?.length) return 0; let x=+v; for(const [th,sc] of [...s].sort((a,b)=>b[0]-a[0])) if(x>=+th) return +sc; return 0; };
+const amtDiff=(v,up,dn)=> (v>0? [binsAmt(v,up),0] : v<0? [0,binsAmt(Math.abs(v),dn)] : [0,0]);
+const binsDays=(v,r)=>{ if(v==null) return 0; let x=+v; for(const [lo,hi,sc] of r||[]) if((lo??-1e99)<=x && x<(hi??1e99)) return +sc; return 0; };
+const binsPP  =(v,up,dn,th=0)=>{ if(v==null) return [0,0]; let x=+v; if(Math.abs(x)<+th) return [0,0]; return x>0? [binsAmt(x,up),0] : [0,binsAmt(Math.abs(x),dn)]; };
+const binsPct =(v,gr,de,capUp=null,capDn=null)=>{ if(v==null) return [0,0]; let x=+v; if(capUp!=null) x=Math.min(x,+capUp); if(capDn!=null) x=Math.max(x,+capDn); return x>0? [binsAmt(x,gr),0] : x<0? [0,binsAmt(Math.abs(x),de)] : [0,0]; };
+const rangesInc=(v,rg)=>{ if(v==null) return 0; let x=+v; for(const [lo,hi,sc] of rg||[]) if(+lo<=x && x<=+hi) return +sc; return 0; };
+const catMap  =(v,map,unk=0)=> map?.[String(v).trim()] ?? +unk;
+
+function scoreByJson(rec, entity){
+  const feats = (entity==='corp')? RULES.corp : RULES.nat;
+  let Rnum=0, Aden=0, Anum=0, Rden=0, Z=false;
+  for(const f of feats){
+    const sc = f?.score||{}; const w = +f?.weight||0; const tp = String(sc.type||'').toLowerCase();
+
+    // 排除規則（Z）
+    if(tp==='binary_exclude' || f.key==='compliance_exclusion'){
+      const v = valOf(rec, f, entity);
+      const yes = String(v).toUpperCase();
+      if(['1','Y','TRUE'].includes(yes)) Z=true;
+      continue;
+    }
+
+    let r=0,a=0;
+    const v = valOf(rec, f, entity);
+    if(v==null){ r=0; a=0; }
+    else if(tp==='numeric_bins_amt'){
+      const tgt=(sc.target||'R').toUpperCase(); const scv=binsAmt(v, sc.bins||[]);
+      r = (tgt==='R')? scv:0; a = (tgt==='A')? scv:0;
+    }else if(tp==='numeric_step_ge'){
+      const tgt=(sc.target||'R').toUpperCase(); const scv=stepGE(v, sc.steps||[]);
+      r = (tgt==='R')? scv:0; a = (tgt==='A')? scv:0;
+    }else if(tp==='numeric_bins_amt_diff'){
+      [r,a] = amtDiff(v, sc.up_bins_twd||[], sc.down_bins_twd||[]);
+    }else if(tp==='numeric_bins_days'){
+      const tgt=(sc.target||'A').toUpperCase(); const scv=binsDays(v, sc.ranges||[]);
+      r = (tgt==='R')? scv:0; a = (tgt==='A')? scv:0;
+    }else if(tp==='numeric_bins_pp'){
+      [r,a] = binsPP(v, sc.bins_up||[], sc.bins_down||[], sc.no_score_below_pp||0);
+    }else if(tp==='numeric_bins_pct'){
+      const cap=sc.guards?.cap_pct||{}; [r,a] = binsPct(v, sc.growth_bins||[], sc.decline_bins||[], cap.up, cap.down);
+    }else if(tp==='numeric_ranges'){
+      const tgt=(sc.target||'R').toUpperCase(); const scv=rangesInc(v, sc.ranges||[]);
+      r = (tgt==='R')? scv:0; a = (tgt==='A')? scv:0;
+    }else if(tp==='categorical_map'){
+      const tgt=(sc.target||'R').toUpperCase(); const scv=catMap(v, sc.mapping||{}, sc.unknown_default||0);
+      r = (tgt==='R')? scv:0; a = (tgt==='A')? scv:0;
+    }
+
+    if(w>0){
+      Rnum += w*r; Rden += (r>0? w:0);
+      Anum += w*a; Aden += (a>0? w:0);
+    }
+  }
+  const R = Rden>0? Math.round(Math.min(Math.max((Rnum/Rden)*100,0),100)) : 0;
+  const A = Aden>0? Math.round(Math.min(Math.max((Anum/Aden)*100,0),100)) : 0;
+  return {R,A,Z};
+}
+
+/* ===============================
+   6) 主流程：依 JSON（若已載入）計分，否則用內建門檻
+   =============================== */
+function decideCellByCut(R,A,cut){
+  const rc = R>=cut.R.hi? 'H' : R>=cut.R.mid? 'M' : 'L';
+  const ac = A>=cut.A.hi? 'H' : A>=cut.A.mid? 'M' : 'L';
   return rc+ac;
 }
-const UI_TITLES={HL:'立即接觸（第3級）',HM:'立即接觸（第2級）',HH:'立即接觸（第1級）',ML:'一般接觸（第3級）',MM:'一般接觸（第2級）',MH:'一般接觸（第1級）',LL:'後續接觸（第3級）',LM:'後續接觸（第2級）',LH:'後續接觸（第1級）',Z:'合規排除',U:'未評分'};
-const CELL_TONE={HL:'tone-imm',HM:'tone-imm',HH:'tone-imm',ML:'tone-warm',MM:'tone-warm',MH:'tone-nor',LL:'tone-warm',LM:'tone-warm',LH:'tone-warm'};
-const getTitle=k=> (RULES?.labels?.[k]?.title)||UI_TITLES[k]||'';
 
-/* ===== 7) 主流程 ===== */
 function process(){
-  const forced=el('#selEntity').value, cm=coreMap();
-  const hasComputeR = !!(RULES?.compute?.R?.features?.length);
-  const hasComputeA = !!(RULES?.compute?.A?.features?.length);
+  if(!raw?.length){ enriched=[]; render(); return; }
 
-  enriched=dataRows.map(rec=>{
-    const entity=(forced==='auto')? inferEntity(rec):forced;
-    const excluded=isExcluded(rec);
+  const cut = RULES.loaded && RULES.matrix?.cut ? RULES.matrix.cut : CFG.cut;
+  const labels = RULES.loaded && RULES.matrix?.labels ? RULES.matrix.labels : CFG.labels;
 
-    let R=null, A=null, reason='';
+  enriched = raw.map(rec=>{
+    const entity = (rec.entity==='corp')?'corp':'natural';
 
-    if(hasComputeR || hasComputeA){
-      // 前端計算
-      R = hasComputeR ? computeScore(rec, RULES.compute.R) : null;
-      A = hasComputeA ? computeScore(rec, RULES.compute.A) : null;
-      reason = 'compute(JSON)';
-    }
-    if((R===null || A===null)){ // 任一缺 -> 嘗試從 CSV 補
-      const ra = pickRAfromCSV(rec);
-      if(ra){ if(R===null) R=ra.R; if(A===null) A=ra.A; reason += (reason?'+':'')+'csv(R/A)'; }
+    // 1) 若有 JSON 規則就用 JSON 計分；否則 fallback：R/A皆0（讓你避免內建等權算法；一切以 JSON 為主）
+    let R=0, A=0, Z=false;
+    if(RULES.loaded){
+      const s = scoreByJson(rec, entity);
+      R = s.R; A = s.A; Z = s.Z;
+    }else{
+      R=0; A=0; Z = !!rec.compliance_blacklist;
     }
 
-    const cell = (excluded || !isNum(R) || !isNum(A)) ? null : decideCell(R,A);
-    const state = excluded? 'Z' : (cell? 'SCORED' : 'UNSCORED');
-    return {...rec, entity, excluded, R, A, cell, __state:state, __id:rec[cm.id], __reason:reason||'n/a'};
+    // 2) 矩陣定位
+    const key = Z? 'Z' : decideCellByCut(R,A,cut);
+    const meta = labels[key] || {code:'MM', title:'一般接觸（第2級）'};
+
+    // 3) 輸出欄位（保留原欄位 + 新欄位）
+    const base = {...rec};
+    return byKeys({
+      ...base,
+      entity_text: (entity==='corp'?'法人':'自然人'),
+      R, A,
+      cell:key, cell_code:meta.code, cell_title:meta.title,
+      excluded: !!Z
+    }, ['id','name','entity','entity_text','R','A','cell','cell_code','cell_title', ...Object.keys(base)]);
   });
 
   render();
 }
 
-/* ===== 8) UI ===== */
-function applyHeadersFromCuts(){
-  const c=RULES?.cut||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
-  el('#ahL').textContent=`關注低 (<${c.A.mid})`;
-  el('#ahM').textContent=`關注中 (${c.A.mid}–${c.A.hi-1})`;
-  el('#ahH').textContent=`關注高 (≥${c.A.hi})`;
-  el('#rhH').textContent=`推薦高 (≥${c.R.hi})`;
-  el('#rhM').textContent=`推薦中 (${c.R.mid}–${c.R.hi-1})`;
-  el('#rhL').textContent=`推薦低 (<${c.R.mid})`;
-}
-function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
-function render(){
-  applyHeadersFromCuts();
-  const scored=enriched.filter(x=>x.__state==='SCORED');
-  const zlist=enriched.filter(x=>x.__state==='Z');
-  const unscored=enriched.filter(x=>x.__state==='UNSCORED');
-
-  el('#statScored').textContent=fmt(scored.length);
-  el('#statUnscored').textContent=fmt(unscored.length);
-  el('#statZ').textContent=fmt(zlist.length);
-
-  const byCell=groupBy(scored, r=>r.cell);
-  ['HL','HM','HH','ML','MM','MH','LL','LM','LH'].forEach(key=>{
-    const box=el('#cell-'+key); if(!box) return;
-    const title=getTitle(key); const count=(byCell[key]||[]).length;
-    box.className=`cell ${CELL_TONE[key]||'tone-warm'}`;
-    box.innerHTML=`<h4>${title}</h4><div class="row"><span class="pill">筆數</span><span class="num">${fmt(count)}</span></div>`;
-    box.onclick=()=>{ viewFilter=key; renderTable(); highlightFilter(); };
+/* ===============================
+   7) 匯出 Excel
+   =============================== */
+function exportXLSX(){
+  if(!enriched?.length){ alert('沒有資料可匯出'); return; }
+  const rows = enriched.map(r=>{
+    const base = {...r};
+    delete base.excluded;
+    return base;
   });
-
-  const zbar=el('#zBar'); if(zbar){ zbar.innerHTML=`Z｜${getTitle('Z')}　•　筆數 <span class="num">${fmt(zlist.length)}</span>`; zbar.onclick=()=>{viewFilter='Z'; renderTable(); highlightFilter();}; }
-  renderFilterChips(); highlightFilter(); renderTable(); renderDiagnostics();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  // 欄寬
+  ws['!cols'] = Object.keys(rows[0]).map(()=>({wch:14}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'decision_result');
+  XLSX.writeFile(wb, 'decision_matrix_result.xlsx');
 }
-function renderFilterChips(){
-  const cont=el('#filters'); cont.innerHTML='';
-  const mk=(text,val)=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=text; b.onclick=()=>{viewFilter=val; renderTable(); highlightFilter();}; return b; };
-  const r1=document.createElement('div'); r1.className='chiprow';
-  r1.appendChild(mk('顯示全部','ALL'));
-  ['HL','HM','HH'].forEach(k=>r1.appendChild(mk(getTitle(k),k)));
-  const r2=document.createElement('div'); r2.className='chiprow';
-  ['ML','MM','MH'].forEach(k=>r2.appendChild(mk(getTitle(k),k)));
-  const r3=document.createElement('div'); r3.className='chiprow';
-  ['LL','LM','LH'].forEach(k=>r3.appendChild(mk(getTitle(k),k)));
-  r3.appendChild(mk('未評分','UNSCORED')); r3.appendChild(mk('合規排除','Z'));
-  cont.appendChild(r1); cont.appendChild(r2); cont.appendChild(r3);
-}
-function highlightFilter(){
-  [...document.querySelectorAll('#filters .chip')].forEach(b=>{
-    const mapTitle = Object.fromEntries(Object.entries(UI_TITLES).map(([k,v])=>[v,k])); mapTitle['未評分']='UNSCORED'; mapTitle['合規排除']='Z';
-    const mapped = (b.textContent==='顯示全部')?'ALL': (mapTitle[b.textContent]||null);
-    b.classList.toggle('active', mapped===viewFilter);
-  });
-}
-function renderTable(){
-  const tbl=el('#resultTbl'), cm=coreMap();
-  const headers=['客戶代號','客群','R(推薦)','A(關注)','狀態/象限','來源'];
-  let rows;
-  if(viewFilter==='ALL') rows=enriched;
-  else if(viewFilter==='Z') rows=enriched.filter(r=>r.__state==='Z');
-  else if(viewFilter==='UNSCORED') rows=enriched.filter(r=>r.__state==='UNSCORED');
-  else rows=enriched.filter(r=>r.__state==='SCORED' && r.cell===viewFilter);
-
-  const limit=el('#selPage').value==='全部'? rows.length : Number(el('#selPage').value);
-  tbl.innerHTML='<thead><tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr></thead>';
-  const body=document.createElement('tbody');
-  rows.slice(0,limit).forEach(r=>{
-    const entityTxt=r.entity==='corp'?'法人':'自然人';
-    const status = r.__state==='Z' ? `Z｜${getTitle('Z')}` : (r.__state==='UNSCORED'?'未評分': getTitle(r.cell));
-    const vals=[ r[cm.id], entityTxt, isNum(r.R)?r.R+'%':'', isNum(r.A)?r.A+'%':'', status, r.__reason ];
-    const tr=document.createElement('tr'); tr.innerHTML=vals.map(v=>`<td>${v??''}</td>`).join(''); body.appendChild(tr);
-  });
-  tbl.appendChild(body);
-}
-
-/* 匯出（只匯出已分群） */
-function toCSV(arr){
-  if(!arr.length) return '';
-  const cm=coreMap(); const cols=['客戶代號','客群','R','A','象限']; const hdr=cols.join(',');
-  const lines=arr.filter(r=>r.__state==='SCORED').map(r=>[
-    r[cm.id], r.entity, r.R, r.A, getTitle(r.cell)
-  ].map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(','));
-  return [hdr, ...lines].join('\n');
-}
-el('#btnDownload').onclick=()=>{
-  const csv=toCSV(enriched); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_scored.csv'; a.click();
-};
-
-/* 診斷面板（顯示 JSON 來源、是否採用前端計分等） */
-function renderDiagnostics(){
-  const cm=coreMap();
-  const hasCompR=!!(RULES?.compute?.R?.features?.length);
-  const hasCompA=!!(RULES?.compute?.A?.features?.length);
-  const mode = (hasCompR||hasCompA) ? '前端計分（JSON compute）' : 'fallback：讀 CSV R/A';
-  el('#diagBox').innerHTML = `
-    <div class="notice">
-      <b>規則檢核</b>
-      <div class="kvline">規則來源：<code>${RULES_URL_INUSE||'（未載入）'}</code></div>
-      <div class="kvline">模式：<b>${mode}</b></div>
-      <div class="kvline">核心欄位：客戶代號 <code>${cm.id}</code>／客群 <code>${cm.entity}</code>／黑名單 <code>${cm.blacklist}</code></div>
-      <div class="kvline">R features：<code>${hasCompR ? RULES.compute.R.features.length : 0}</code>；A features：<code>${hasCompA ? RULES.compute.A.features.length : 0}</code></div>
-      <div class="kvline">提示：CSV 欄位名稱需與 <code>features[].key</code> 或其 <code>alias</code> 對得上；缺值視為 0 分。</div>
-    </div>`;
-}
-
-/* ===== 9) 事件 & 啟動 ===== */
-async function handleCsvInput(file){ if(!file) return; const text=await file.text(); dataRows=csvParse(text); process(); }
-el('#csvFile').addEventListener('change', e=>handleCsvInput(e.target.files?.[0]));
-el('#btnClear').onclick=()=>{ dataRows=[]; enriched=[]; render(); el('#csvFile').value=''; };
-el('#selEntity').onchange=()=>process();
-el('#selPage').onchange=()=>renderTable();
-
-document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); render(); });
+$("#btnXLSX").onclick = exportXLSX;
 </script>
 </body>
 </html>
