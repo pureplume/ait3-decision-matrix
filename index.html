@@ -8,100 +8,59 @@
   /* ===== 主題色票（橘金漸層－平滑亮度分布） ===== */
   :root{
     --bg-grad: linear-gradient(180deg,
-      #f66b40 0%,    /* 柔橘紅起點 */
-      #fa7e49 20%,   /* 過渡橘 */
-      #fc9a5c 40%,   /* 金橘中段 */
-      #fdba7a 65%,   /* 橘米過渡 */
-      #fee3b5 100%   /* 淡米橘收尾 */
-    ); /* 均勻亮度曲線，避免上下兩段感 */
-
-    --panel:#ffffff;         /* 面板白底 */
-    --muted:#8b8b8b;         /* 次要文字（中灰） */
-    --text:#2b2b2b;          /* 主要文字（深灰） */
-    --brand:#e64b2e;         /* 橘紅主色（按鈕/強調） */
-    --chip:#ffe4d0;          /* 晶片淡杏橘 */
-    --grid-border:#2a355c;   /* 保留原矩陣邊框色 */
+      #f66b40 0%,
+      #fa7e49 20%,
+      #fc9a5c 40%,
+      #fdba7a 65%,
+      #fee3b5 100%
+    );
+    --panel:#ffffff; --muted:#8b8b8b; --text:#2b2b2b; --brand:#e64b2e; --chip:#ffe4d0;
+    --grid-border:#2a355c;
   }
-
   html,body{height:100%}
   body{
-    margin:0;
-    background:var(--bg-grad);
-    background-attachment: fixed; /* 鎖定漸層，避免滾動位移造成視覺斷層 */
-    color:var(--text);
-    font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto;
+    margin:0; background:var(--bg-grad); background-attachment: fixed;
+    color:var(--text); font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto;
   }
-
-  /* 抗色帶覆蓋：極低透明度顆粒，打散顯示器量化條紋（不影響點擊/版面） */
-  body::before{
-    content:"";
-    position:fixed; inset:0;
-    pointer-events:none;
+  /* 抗色帶覆蓋（可留可去） */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;
     background-image:
       radial-gradient(circle at 25% 25%, rgba(255,255,255,.015) 0 1px, transparent 1px),
       radial-gradient(circle at 75% 75%, rgba(0,0,0,.015) 0 1px, transparent 1px);
-    background-size:3px 3px, 4px 4px;
-    mix-blend-mode:overlay;
+    background-size:3px 3px, 4px 4px; mix-blend-mode:overlay;
   }
 
   .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
   .hero{display:flex;gap:20px;align-items:center}
-
-  /* 徽章：淡橘底＋橘紅字 */
-  .badge{
-    display:inline-flex;gap:8px;align-items:center;
-    background:var(--chip);color:var(--brand);
-    padding:6px 10px;border-radius:999px;border:1px solid #f3a689;
-  }
-
+  .badge{display:inline-flex;gap:8px;align-items:center;background:var(--chip);color:var(--brand);
+    padding:6px 10px;border-radius:999px;border:1px solid #f3a689}
   h1{font-size:28px;margin:2px 0 6px}
   p.muted{color:var(--muted);margin:0}
-
-  /* 面板：白底＋柔和陰影 */
-  .panel{
-    background:var(--panel);
-    border:1px solid #f3d3c1;
-    border-radius:16px;padding:18px;
-    box-shadow:0 6px 20px rgba(0,0,0,.08);
-  }
-
+  .panel{background:var(--panel);border:1px solid #f3d3c1;border-radius:16px;padding:18px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
   .grid{display:grid;gap:16px}
   .grid.cols-2{grid-template-columns:1fr 1fr}
 
-  /* 按鈕：橘紅主色 */
-  .btn{
-    appearance:none;border:none;border-radius:12px;
-    padding:10px 14px;background:var(--brand);color:#fff;cursor:pointer;
-    box-shadow:0 2px 6px rgba(230,75,46,.30);
-  }
+  .btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;background:var(--brand);color:#fff;cursor:pointer;box-shadow:0 2px 6px rgba(230,75,46,.30)}
   .btn:hover{filter:brightness(1.1)}
 
-  /* 上傳：柔橘描邊 */
   input[type=file]{display:none}
-  label.file{
-    display:inline-flex;gap:10px;align-items:center;
-    background:#fff0e5;border:1px dashed #f3bda0;
-    padding:12px 14px;border-radius:12px;cursor:pointer;
-    color:#b23a1f;
-  }
+  label.file{display:inline-flex;gap:10px;align-items:center;background:#fff0e5;border:1px dashed #f3bda0;
+    padding:12px 14px;border-radius:12px;cursor:pointer;color:#b23a1f}
 
   .kv{display:flex;gap:10px;align-items:center}
   .kv .k{color:#b16a4f}
-
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .right{margin-left:auto}
-
-  /* 訊息條：暖橘提示 / 錯誤 */
-  .notice{
-    background:#fff5ef;border:1px solid #f6c9b7;
-    padding:10px 12px;border-radius:10px;color:#2b2b2b;
-  }
-  .err{
-    background:#ffeae8;border:1px solid #e65b56;color:#b70000;
-    padding:10px 12px;border-radius:10px;margin:10px 0;
-  }
-
+  .notice{background:#fff5ef;border:1px solid #f6c9b7;padding:10px 12px;border-radius:10px;color:#2b2b2b}
+  .err{background:#ffeae8;border:1px solid #e65b56;color:#b70000;padding:10px 12px;border-radius:10px;margin:10px 0}
   footer{opacity:.7;margin:24px 0 40px}
+
+  /* === 篩選面板：下半部動作區 === */
+  .filter-actions{
+    margin-top:12px; padding-top:12px;
+    border-top:1px dashed #f3bda0;
+    display:flex; gap:8px; flex-wrap:wrap;
+  }
 
   /* ===== 矩陣（僅調整一般接觸第1級底色） ===== */
   :root{ --side-w:56px;--head-h:56px; --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr; --row-h-H:112px;--row-h-M:112px;--row-h-L:112px; }
@@ -114,31 +73,13 @@
   .cell h4{margin:0 0 6px;font-size:14px;color:#000}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
   .num{font-size:22px;font-weight:700;color:#000}
-  /* 調整色系：立即接觸、一般接觸(第1級) 同底色 */
-  .tone-imm{background:#fbc37a}
-  .tone-nor{background:#fbc37a}
-  .tone-warm{background:#fff1c7}
+  .tone-imm{background:#fbc37a} .tone-nor{background:#fbc37a} .tone-warm{background:#fff1c7}
   .zbar{margin-top:8px;background:#f5f7fa;color:#000;border:1px solid var(--grid-border);border-radius:8px;padding:10px;text-align:center;font-weight:700;cursor:pointer}
 
-  /* ===== 表格（暖橘表頭＋淺橘邊） ===== */
+  /* ===== 表格 ===== */
   .tbl{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
-  .tbl thead th{
-    background:#ffe0d0;color:#b23a1f;
-    position:sticky;top:0;z-index:3;box-shadow:0 2px 0 rgba(0,0,0,.10);
-  }
+  .tbl thead th{background:#ffe0d0;color:#b23a1f;position:sticky;top:0;z-index:3;box-shadow:0 2px 0 rgba(0,0,0,.10)}
   .tbl th,.tbl td{border-bottom:1px solid #f3d3c1;padding:8px 10px;text-align:left;white-space:nowrap}
-
-  /* ===== 診斷 & 篩選（暖橘晶片） ===== */
-  #diagBox .kvline{display:flex;gap:10px;flex-wrap:wrap}
-  #diagBox code{background:#fff0e8;border:1px solid #f3bda0;padding:2px 6px;border-radius:6px;color:#b23a1f}
-  #filters{display:flex;flex-direction:column;gap:8px}
-  .chiprow{display:flex;flex-wrap:wrap;gap:8px}
-  #filters .chip{
-    background:#fff0e5;border:1px solid #f3bda0;color:#b23a1f;
-    border-radius:999px;padding:8px 12px;cursor:pointer;
-  }
-  #filters .chip:hover{filter:brightness(1.08)}
-  #filters .chip.active{outline:2px solid var(--brand)}
 </style>
 
 <!-- 匯出 Excel + 讀取 XLSX -->
@@ -148,9 +89,7 @@
   <div class="wrap">
     <div class="hero">
       <span class="badge">AI T3 B模組</span>
-      <div>
-        <h1>開發潛力名單決策矩陣</h1>
-      </div>
+      <div><h1>開發潛力名單決策矩陣</h1></div>
     </div>
 
     <div id="errBox"></div>
@@ -176,12 +115,9 @@
     </div>
 
     <div class="grid cols-2" style="margin-top:16px">
+      <!-- 左：九宮格面板（移除原匯出按鈕） -->
       <div class="panel">
-        <div class="row">
-          <h3 style="margin:0">九宮格決策摘要</h3>
-          <button class="btn right" id="btnDownload">匯出結果（已分群）</button>
-          <button class="btn" id="btnXLSX">匯出結果 Excel</button>
-        </div>
+        <div class="row"><h3 style="margin:0">九宮格決策摘要</h3></div>
         <div class="matrix-wrapper">
           <div class="matrix-header"></div>
           <div class="matrix-header" id="ahL">關注低</div>
@@ -206,6 +142,7 @@
         <div class="zbar" id="zBar"></div>
       </div>
 
+      <!-- 右：篩選面板（上：原篩選；下：匯出/派送區） -->
       <div class="panel">
         <h3 style="margin:0 0 8px">篩選</h3>
         <div id="filters"></div>
@@ -222,6 +159,13 @@
               <option>50</option><option>100</option><option>200</option><option>全部</option>
             </select>
           </label>
+        </div>
+
+        <!-- 新增：動作區（匯出＋派送），id 沿用原本以保留功能 -->
+        <div class="filter-actions">
+          <button class="btn" id="btnDownload">匯出結果（已分群）</button>
+          <button class="btn" id="btnXLSX">匯出結果 Excel</button>
+          <button class="btn" id="btnDispatch">名單派送</button>
         </div>
       </div>
     </div>
@@ -246,17 +190,11 @@ const RULES_SOURCES = [
 /* ===== 1) 狀態 & 小工具 ===== */
 let RULES=null, RULES_URL_INUSE=null, CURRENT_HEADERS=[];
 let dataRows=[], enriched=[], viewFilter='ALL';
-
 const el=s=>document.querySelector(s);
 const fmt=n=> (typeof n==='number'&&Number.isFinite(n))? n.toLocaleString('zh-TW') : (n??'');
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const isNum=v=> typeof v==='number'&&Number.isFinite(v);
-const asNum=v=>{
-  if(v===''||v==null) return NaN;
-  if(typeof v==='number') return v;
-  const s=String(v).replace(/[,\s%％]/g,'');
-  return Number(s);
-};
+const asNum=v=>{ if(v===''||v==null) return NaN; if(typeof v==='number') return v; const s=String(v).replace(/[,\s%％]/g,''); return Number(s); };
 const normHeader=h=>String(h||'').replace(/^\uFEFF/,'').replace(/\r?\n/g,'').trim();
 const kNorm=s=>String(s||'').toLowerCase().replace(/\uFEFF/g,'').replace(/\r?\n/g,'').replace(/[\s_()（）\-]/g,'').replace(/[\/\\]/g,'/').trim();
 function warn(msg){ el('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
@@ -297,7 +235,7 @@ function normalizeRules(raw){
   return R;
 }
 
-/* ===== 2.5) v1.3 → compute 轉接器（支援 R/A 權重、類別/分箱/規則/差額/百分比等） ===== */
+/* ===== 2.5) v1.3 → compute 轉接器 ===== */
 function buildComputeFromV13(R){
   const comp = R.compute || {R:{features:[]}, A:{features:[]}};
   if(!comp.R) comp.R = {features:[]};
@@ -306,12 +244,7 @@ function buildComputeFromV13(R){
 
   const convertBinsByThresholds = (pairs) => {
     if(!Array.isArray(pairs)) return null;
-    const out=[];
-    for(let i=0;i<pairs.length;i++){
-      const th = Number(pairs[i][0]), sc = Number(pairs[i][1]||0);
-      const next = (i>0)? Number(pairs[i-1][0]) : Infinity;
-      out.push({min:th, max:next, score:sc});
-    }
+    const out=[]; for(let i=0;i<pairs.length;i++){ const th=Number(pairs[i][0]), sc=Number(pairs[i][1]||0); const next=(i>0)?Number(pairs[i-1][0]):Infinity; out.push({min:th,max:next,score:sc}); }
     return out;
   };
   const adapt = (f, entity) => {
@@ -321,48 +254,28 @@ function buildComputeFromV13(R){
     const base={ key:f.key, label:f.label||f.key, aliases:Array.isArray(f.aliases)?f.aliases.slice(0):[], entity };
 
     if(type==='categorical_map'){
-      const table=sc.mapping||sc.map||{};
-      if(wR>0) push('R',{...base,weight:wR,preprocess:'raw',table});
-      if(wA>0) push('A',{...base,weight:wA,preprocess:'raw',table});
-      return;
+      const table=sc.mapping||sc.map||{}; if(wR>0) push('R',{...base,weight:wR,preprocess:'raw',table}); if(wA>0) push('A',{...base,weight:wA,preprocess:'raw',table}); return;
     }
     if(type==='numeric_bins_amt' || type==='numeric_bins' || type==='numeric_step_ge' || type==='numeric_ranges'){
-      const bins = convertBinsByThresholds(sc.bins||sc.steps);
-      if(bins){ if(wR>0) push('R',{...base,weight:wR,bins}); if(wA>0) push('A',{...base,weight:wA,bins}); }
-      return;
+      const bins=convertBinsByThresholds(sc.bins||sc.steps); if(bins){ if(wR>0) push('R',{...base,weight:wR,bins}); if(wA>0) push('A',{...base,weight:wA,bins}); } return;
     }
     if(type==='numeric_bins_amt_diff'){
-      const upBins=convertBinsByThresholds(sc.up_bins_twd||sc.up_bins_cnt||[]);
-      const downBins=convertBinsByThresholds(sc.down_bins_twd||sc.down_bins_cnt||[])?.map(b=>({min:-b.max,max:-b.min,score:b.score}));
-      if(wR>0&&upBins) push('R',{...base,weight:wR,bins:upBins});
-      if(wA>0&&downBins) push('A',{...base,weight:wA,bins:downBins});
-      return;
+      const upBins=convertBinsByThresholds(sc.up_bins_twd||sc.up_bins_cnt||[]); const downBins=convertBinsByThresholds(sc.down_bins_twd||sc.down_bins_cnt||[])?.map(b=>({min:-b.max,max:-b.min,score:b.score}));
+      if(wR>0&&upBins) push('R',{...base,weight:wR,bins:upBins}); if(wA>0&&downBins) push('A',{...base,weight:wA,bins:downBins}); return;
     }
     if(type==='numeric_bins_pp'){
-      const up=convertBinsByThresholds(sc.bins_up||[]);
-      const down=convertBinsByThresholds(sc.bins_down||[])?.map(b=>({min:-Infinity,max:b.max,score:b.score}));
-      if(wR>0&&up) push('R',{...base,weight:wR,bins:up});
-      if(wA>0&&down) push('A',{...base,weight:wA,bins:down});
-      return;
+      const up=convertBinsByThresholds(sc.bins_up||[]); const down=convertBinsByThresholds(sc.bins_down||[])?.map(b=>({min:-Infinity,max:b.max,score:b.score}));
+      if(wR>0&&up) push('R',{...base,weight:wR,bins:up}); if(wA>0&&down) push('A',{...base,weight:wA,bins:down}); return;
     }
     if(type==='numeric_bins_pct_diff'){
-      const up=convertBinsByThresholds(sc.bins_up_pct||[]);
-      const down=convertBinsByThresholds(sc.bins_down_pct||[])?.map(b=>({min:-Infinity,max:b.max,score:b.score}));
-      if(wR>0&&up) push('R',{...base,weight:wR,bins:up,preprocess:'percent'});
-      if(wA>0&&down) push('A',{...base,weight:wA,bins:down,preprocess:'percent'});
-      return;
+      const up=convertBinsByThresholds(sc.bins_up_pct||[]); const down=convertBinsByThresholds(sc.bins_down_pct||[])?.map(b=>({min:-Infinity,max:b.max,score:b.score}));
+      if(wR>0&&up) push('R',{...base,weight:wR,bins:up,preprocess:'percent'}); if(wA>0&&down) push('A',{...base,weight:wA,bins:down,preprocess:'percent'}); return;
     }
     if(Array.isArray(sc.rules)&&sc.rules.length){
       const rule=sc.rules.map(r=>({if:String(r.if||'').trim(),score:Number(r.score)||0}));
-      if(wR>0) push('R',{...base,weight:wR,rule});
-      if(wA>0) push('A',{...base,weight:wA,rule});
-      return;
+      if(wR>0) push('R',{...base,weight:wR,rule}); if(wA>0) push('A',{...base,weight:wA,rule}); return;
     }
-    if(type==='binary_exclude'){
-      R._binary_exclude = R._binary_exclude || [];
-      R._binary_exclude.push({key:f.key,aliases:(f.aliases||[]).slice(0)});
-      return;
-    }
+    if(type==='binary_exclude'){ R._binary_exclude=R._binary_exclude||[]; R._binary_exclude.push({key:f.key,aliases:(f.aliases||[]).slice(0)}); return; }
   };
   (Array.isArray(R.natural?.features)?R.natural.features:[]).forEach(f=>adapt(f,'natural'));
   (Array.isArray(R.corporate?.features)?R.corporate.features:[]).forEach(f=>adapt(f,'corp'));
@@ -383,24 +296,12 @@ function csvParse(text){
   return rows.filter(r=>r.some(x=>x!=='')).map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
 }
 function xlsxParse(arrayBuffer){
-  const wb = XLSX.read(arrayBuffer, {type:'array'});
-  const sheetNames = wb.SheetNames||[];
-  const all=[];
+  const wb = XLSX.read(arrayBuffer, {type:'array'}); const sheetNames = wb.SheetNames||[]; const all=[];
   sheetNames.forEach(sn=>{
-    const ws = wb.Sheets[sn];
-    if(!ws) return;
-    const json = XLSX.utils.sheet_to_json(ws, {raw:true, defval:''});
-    if(!json.length) return;
-    const isNat = /自然人/i.test(sn);
-    const isCorp = /非自然人|法人/i.test(sn);
-    json.forEach(r=>{
-      const rec = {...r};
-      if(!('自然人/非自然人' in rec) && !('自然人/\n非自然人' in rec)){
-        if(isNat) rec['自然人/\n非自然人']='自然人';
-        if(isCorp) rec['自然人/\n非自然人']='非自然人';
-      }
-      all.push(rec);
-    });
+    const ws = wb.Sheets[sn]; if(!ws) return;
+    const json = XLSX.utils.sheet_to_json(ws, {raw:true, defval:''}); if(!json.length) return;
+    const isNat = /自然人/i.test(sn); const isCorp = /非自然人|法人/i.test(sn);
+    json.forEach(r=>{ const rec={...r}; if(!('自然人/非自然人' in rec) && !('自然人/\n非自然人' in rec)){ if(isNat) rec['自然人/\n非自然人']='自然人'; if(isCorp) rec['自然人/\n非自然人']='非自然人'; } all.push(rec); });
   });
   if(all.length){ CURRENT_HEADERS = Object.keys(all[0]).map(normHeader); }
   return all;
@@ -411,12 +312,10 @@ function coreMap(){
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const h=new Map(CURRENT_HEADERS.map(x=>[kNorm(x),x]));
   const pick=(...c)=>{ for(const s of c){ const k=h.get(kNorm(s)); if(k) return k; } return c[0]; };
-  return {
-    id: pick('客戶代號','客戶代號\n','客戶id','id','客編','CUST_ID'),
-    name: pick('客戶名稱','名稱','name','CUST_NAME'),
-    entity: pick('自然人/非自然人','自然人/\n非自然人','客群','entity','ENTITY_TYPE'),
-    blacklist: pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','負面名單','EXCLUSION_OR_NO_CONSENT','Z_FLAG','BLACKLIST')
-  };
+  return { id: pick('客戶代號','客戶代號\n','客戶id','id','客編','CUST_ID'),
+           name: pick('客戶名稱','名稱','name','CUST_NAME'),
+           entity: pick('自然人/非自然人','自然人/\n非自然人','客群','entity','ENTITY_TYPE'),
+           blacklist: pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','負面名單','EXCLUSION_OR_NO_CONSENT','Z_FLAG','BLACKLIST') };
 }
 function isExcluded(rec){
   const cm=coreMap();
@@ -425,11 +324,8 @@ function isExcluded(rec){
   if(Array.isArray(RULES?._binary_exclude)){
     const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k]));
     for(const ex of RULES._binary_exclude){
-      for(const c of [ex.key, ...(ex.aliases||[])]){
-        const k=idx.get(kNorm(c)); if(!k) continue;
-        const vv=String(rec[k]??'').trim();
-        if(/^(1|true|y|yes|是|Y)$/i.test(vv)) return true;
-      }
+      for(const c of [ex.key, ...(ex.aliases||[])]){ const k=idx.get(kNorm(c)); if(!k) continue;
+        const vv=String(rec[k]??'').trim(); if(/^(1|true|y|yes|是|Y)$/i.test(vv)) return true; }
     }
   }
   return false;
@@ -443,102 +339,30 @@ function inferEntity(rec){
   return corpHints.some(k=>k in rec)? 'corp':'natural';
 }
 
-/* ===== 5) 前端計分引擎 ===== */
-function pickField(rec, key, alias=[]) {
-  if(key in rec) return key;
-  const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k]));
-  const tryList=[key, ...alias];
-  for(const name of tryList){ const k=idx.get(kNorm(name)); if(k) return k; }
-  return null;
-}
-function preprocessVal(v, pre){
-  if(pre==='raw') return v;
-  let x=asNum(v);
-  if(!isNum(x)) return NaN;
-  if(pre==='percent'){
-    if(String(v).includes('%') || x>1) x = x/100;
-  }
-  if(pre==='int') x = Math.round(x);
-  return x;
-}
-function evalCond(x, cond){
-  if(!isNum(x)) return false;
-  const s=String(cond).trim();
-  const m1=s.match(/^(>=|<=|>|<|==|=|!=)\s*(-?\d+(\.\d+)?)$/);
-  if(m1){
-    const op=m1[1], val=Number(m1[2]);
-    if(op==='>=') return x>=val;
-    if(op==='<=') return x<=val;
-    if(op==='>')  return x> val;
-    if(op=== '<') return x< val;
-    if(op==='=='||op==='=') return x===val;
-    if(op==='!=') return x!==val;
-  }
-  const m2=s.match(/^(between|range)\s+(-?\d+(\.\d+)?)\s*(\.{2}|,|~|to|-)\s*(-?\d+(\.\d+)?)$/i);
-  if(m2){ const a=Number(m2[2]), b=Number(m2[5]); return x>=Math.min(a,b) && x<=Math.max(a,b); }
-  const m3=s.match(/^\[\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\]$/);
-  if(m3){ const a=Number(m3[1]), b=Number(m3[3]); return x>=a && x<=b; }
-  return false;
-}
-function scoreByRule(x, feature){
-  if(Array.isArray(feature.rule)){
-    for(const r of feature.rule){ if(r && evalCond(asNum(x), r.if)) return Number(r.score)||0; }
-    return 0;
-  }
-  if(Array.isArray(feature.bins)){
-    const xv = asNum(x); if(!isNum(xv)) return 0;
-    for(const b of feature.bins){
-      const lo=('min' in b)? Number(b.min):-Infinity; const hi=('max' in b)? Number(b.max):Infinity;
-      if(xv>=lo && xv<=hi) return Number(b.score)||0;
-    }
-    return 0;
-  }
-  if(feature.table && typeof feature.table==='object'){
-    const key = String(x ?? '');
-    if(Object.prototype.hasOwnProperty.call(feature.table, key)) return Number(feature.table[key])||0;
-    return 0;
-  }
-  return 0;
-}
-function allowEntity(feat, entity){
-  const e = (feat.entity||'both').toLowerCase();
-  return e === 'both' || e === (entity||'').toLowerCase();
-}
-function computeScore(rec, block, entity){
-  if(!block || !Array.isArray(block.features) || !block.features.length) return null;
-  let sum=0, wsum=0, matched=0;
-  for(const f of block.features){
-    if(!allowEntity(f, entity)) continue;
-    const field = pickField(rec, f.key, f.alias||f.aliases||[]);
-    if(!field) continue;
-    const raw = rec[field];
-    const val = preprocessVal(raw, f.preprocess);
-    const s = scoreByRule(val, f);
-    const w = Number(f.weight)||0;
-    if(w<=0) continue;
-    matched++;
-    sum += s * w; wsum += w;
-  }
-  if(wsum<=0) return null;
-  const scaled = 100 * (sum / wsum);
-  return clamp(Math.round(scaled), 0, 100);
-}
+/* ===== 5) 前端計分引擎（略，與原本相同） ===== */
+function pickField(rec, key, alias=[]) { if(key in rec) return key; const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k])); const tryList=[key, ...alias]; for(const name of tryList){ const k=idx.get(kNorm(name)); if(k) return k; } return null; }
+function preprocessVal(v, pre){ if(pre==='raw') return v; let x=asNum(v); if(!isNum(x)) return NaN; if(pre==='percent'){ if(String(v).includes('%') || x>1) x = x/100; } if(pre==='int') x = Math.round(x); return x; }
+function evalCond(x, cond){ if(!isNum(x)) return false; const s=String(cond).trim();
+  const m1=s.match(/^(>=|<=|>|<|==|=|!=)\s*(-?\d+(\.\d+)?)$/); if(m1){ const op=m1[1], val=Number(m1[2]); if(op==='>=') return x>=val; if(op==='<=') return x<=val; if(op==='>') return x>val; if(op==='<') return x<val; if(op==='=='||op==='=') return x===val; if(op==='!=') return x!==val; }
+  const m2=s.match(/^(between|range)\s+(-?\d+(\.\d+)?)\s*(\.{2}|,|~|to|-)\s*(-?\d+(\.\d+)?)$/i); if(m2){ const a=Number(m2[2]), b=Number(m2[5]); return x>=Math.min(a,b) && x<=Math.max(a,b); }
+  const m3=s.match(/^\[\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\]$/); if(m3){ const a=Number(m3[1]), b=Number(m3[3]); return x>=a && x<=b; } return false; }
+function scoreByRule(x, f){ if(Array.isArray(f.rule)){ for(const r of f.rule){ if(r && evalCond(asNum(x), r.if)) return Number(r.score)||0; } return 0; }
+  if(Array.isArray(f.bins)){ const xv=asNum(x); if(!isNum(xv)) return 0; for(const b of f.bins){ const lo=('min' in b)?Number(b.min):-Infinity; const hi=('max' in b)?Number(b.max):Infinity; if(xv>=lo&&xv<=hi) return Number(b.score)||0; } return 0; }
+  if(f.table && typeof f.table==='object'){ const key=String(x ?? ''); if(Object.prototype.hasOwnProperty.call(f.table,key)) return Number(f.table[key])||0; return 0; }
+  return 0; }
+function allowEntity(f, e){ const t=(f.entity||'both').toLowerCase(); return t==='both'||t===(e||'').toLowerCase(); }
+function computeScore(rec, block, entity){ if(!block||!Array.isArray(block.features)||!block.features.length) return null;
+  let sum=0, wsum=0; for(const f of block.features){ if(!allowEntity(f, entity)) continue; const field=pickField(rec,f.key,f.alias||f.aliases||[]); if(!field) continue; const raw=rec[field]; const val=preprocessVal(raw,f.preprocess); const s=scoreByRule(val,f); const w=Number(f.weight)||0; if(w<=0) continue; sum+=s*w; wsum+=w; }
+  if(wsum<=0) return null; const scaled=100*(sum/wsum); return clamp(Math.round(scaled),0,100); }
 
 /* fallback：資料檔若已提供 R/A */
 function pickRAfromFileRec(rec){
-  const ms=RULES?.mapping?.score||{};
-  const keys=Object.keys(rec); const idx=new Map(keys.map(k=>[kNorm(k),k]));
-  const tryKey=(given, fb)=>{
-    if(given&&rec[given]!=null) return given;
-    if(given&&idx.has(kNorm(given))) return idx.get(kNorm(given));
-    for(const x of fb){ if(rec[x]!=null) return x; const k=idx.get(kNorm(x)); if(k) return k; }
-    return null;
-  };
+  const ms=RULES?.mapping?.score||{}; const keys=Object.keys(rec); const idx=new Map(keys.map(k=>[kNorm(k),k]));
+  const tryKey=(given, fb)=>{ if(given&&rec[given]!=null) return given; if(given&&idx.has(kNorm(given))) return idx.get(kNorm(given));
+    for(const x of fb){ if(rec[x]!=null) return x; const k=idx.get(kNorm(x)); if(k) return k; } return null; };
   const rKey=tryKey(ms.R, ['R','推薦分數','推薦R','加權推薦分數','R分數','R_SCORE']);
   const aKey=tryKey(ms.A, ['A','關注分數','關注A','加權關注分數','A分數','A_SCORE']);
-  if(!rKey||!aKey) return null;
-  const R=asNum(rec[rKey]), A=asNum(rec[aKey]); if(!isNum(R)||!isNum(A)) return null;
-  return { R:clamp(R,0,100), A:clamp(A,0,100) };
+  if(!rKey||!aKey) return null; const R=asNum(rec[rKey]), A=asNum(rec[aKey]); if(!isNum(R)||!isNum(A)) return null; return { R:clamp(R,0,100), A:clamp(A,0,100) };
 }
 
 /* ===== 6) 分群（依 cut） ===== */
@@ -563,7 +387,6 @@ function process(){
     const excluded=isExcluded(rec);
 
     let R=null, A=null;
-
     if(hasComputeR || hasComputeA){
       R = hasComputeR ? computeScore(rec, RULES.compute.R, entity) : null;
       A = hasComputeA ? computeScore(rec, RULES.compute.A, entity) : null;
@@ -669,7 +492,7 @@ el('#btnDownload').onclick=()=>{
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_scored.csv'; a.click();
 };
 
-/* 診斷面板（新增「未命中特徵」提示） */
+/* 診斷面板 */
 function auditCoverage(){
   const hset=new Set(CURRENT_HEADERS.map(kNorm));
   const missR=[], missA=[], hitR=[], hitA=[];
@@ -702,21 +525,14 @@ function renderDiagnostics(){
     </div>`;
 }
 
-/* ===== 9) 事件 & 啟動（只支援 CSV / XLSX） ===== */
+/* ===== 9) 事件 & 啟動 ===== */
 async function handleInputFile(file){
   if(!file) return;
   const name=(file.name||'').toLowerCase();
   try{
-    if(name.endsWith('.xlsx')){
-      const buf = await file.arrayBuffer();
-      dataRows = xlsxParse(buf);
-      process(); return;
-    }
-    const text=await file.text();
-    dataRows=csvParse(text); process();
-  }catch(e){
-    warn('檔案解析失敗：'+e.message);
-  }
+    if(name.endsWith('.xlsx')){ const buf = await file.arrayBuffer(); dataRows = xlsxParse(buf); process(); return; }
+    const text=await file.text(); dataRows=csvParse(text); process();
+  }catch(e){ warn('檔案解析失敗：'+e.message); }
 }
 el('#csvFile').addEventListener('change', e=>handleInputFile(e.target.files?.[0]));
 el('#btnClear').onclick=()=>{ dataRows=[]; enriched=[]; render(); el('#csvFile').value=''; };
@@ -738,27 +554,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); ren
         if ('__state' in rec)     o['狀態']=rec.__state;
         if ('cell' in rec)        o['matrix_key']=rec.cell;
         if ('cell' in rec)        o['matrix_title']=getTitle(rec.cell);
-        Object.keys(rec).forEach(k=>{
-          if(/^(__|excluded)$/.test(k)) return;
-          if(!(k in o)) o[k]=rec[k];
-        });
+        Object.keys(rec).forEach(k=>{ if(/^(__|excluded)$/.test(k)) return; if(!(k in o)) o[k]=rec[k]; });
         return o;
       });
       const head=['客戶代號','客群','R_score','A_score','狀態','matrix_key','matrix_title'];
-      rows = rows.map(r=>{
-        const out={}; head.forEach(h=>{ if(h in r) out[h]=r[h]; });
-        Object.keys(r).forEach(k=>{ if(!(k in out)) out[k]=r[k]; });
-        return out;
-      });
+      rows = rows.map(r=>{ const out={}; head.forEach(h=>{ if(h in r) out[h]=r[h]; }); Object.keys(r).forEach(k=>{ if(!(k in out)) out[k]=r[k]; }); return out; });
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(rows);
       ws['!cols'] = Object.keys(rows[0]||{}).map(()=>({wch:14}));
       XLSX.utils.book_append_sheet(wb, ws, 'decision_result');
-      try{
-        const meta=[{ rules_loaded: !!(RULES), rules_source: RULES_URL_INUSE||'', exported_at: new Date().toISOString() }];
-        const wsMeta = XLSX.utils.json_to_sheet(meta);
-        XLSX.utils.book_append_sheet(wb, wsMeta, 'metadata');
-      }catch(e){}
+      try{ const meta=[{ rules_loaded: !!(RULES), rules_source: RULES_URL_INUSE||'', exported_at: new Date().toISOString() }];
+           const wsMeta = XLSX.utils.json_to_sheet(meta); XLSX.utils.book_append_sheet(wb, wsMeta, 'metadata'); }catch(e){}
       XLSX.writeFile(wb, 'decision_matrix_result.xlsx');
       return;
     }
@@ -772,6 +578,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); ren
   const btn = document.getElementById('btnXLSX');
   if(btn) btn.addEventListener('click', exportDecisionXLSX);
 })();
+
+/* ===== 名單派送（占位符，未實作邏輯） ===== */
+document.getElementById('btnDispatch').addEventListener('click', ()=>{
+  alert('名單派送：請接上你的派送流程（此處暫為占位按鈕）。');
+});
 </script>
 </body>
 </html>
