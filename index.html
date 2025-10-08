@@ -53,6 +53,9 @@
   #filters .chip:hover{filter:brightness(1.08)}
   #filters .chip.active{outline:2px solid var(--brand)}
 </style>
+
+<!-- ✅ 新增：XLSX 外掛（用於產出 Excel） -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -88,7 +91,12 @@
 
     <div class="grid cols-2" style="margin-top:16px">
       <div class="panel">
-        <div class="row"><h3 style="margin:0">九宮格決策摘要</h3><button class="btn right" id="btnDownload">匯出結果（已分群）</button></div>
+        <div class="row">
+          <h3 style="margin:0">九宮格決策摘要</h3>
+          <button class="btn right" id="btnDownload">匯出結果（已分群）</button>
+          <!-- ✅ 新增：不改原有按鈕，再加一顆 Excel 匯出 -->
+          <button class="btn" id="btnXLSX">匯出結果 Excel</button>
+        </div>
         <div class="matrix-wrapper">
           <div class="matrix-header"></div>
           <div class="matrix-header" id="ahL">關注低</div>
@@ -171,7 +179,7 @@ async function loadRules(){
     try{
       const res=await fetch(url+'?v='+Date.now(),{cache:'no-store'}); if(!res.ok){lastErr='HTTP '+res.status; continue;}
       const text=await res.text();
-      const raw=JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,''));
+      const raw=JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,'')); // 去註解
       const node=(function find(o){
         if(!o||typeof o!=='object') return null;
         if(o.cut && o.labels && (o.compute || o.mapping)) return o; // 新版
@@ -222,13 +230,7 @@ function inferEntity(rec){
   const hints=['公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','客戶往來業務類別']; return hints.some(k=>k in rec)?'corp':'natural';
 }
 
-/* ===== 5) 前端計分引擎 =====
- * JSON 期待格式（彈性，擇一即可）：
- * compute.R.features: [{ key, weight, rule:[{if, score}], alias?:[], preprocess?:'percent'|'int' }]
- * compute.A.features: 同上
- * 也支援 table: {value: score}、bins: [{min?, max?, score}]
- * 若 compute 缺失，fallback 讀 CSV 的 R/A（mapping.score 或欄名 R/A）
- */
+/* ===== 5) 前端計分引擎（簡化顯示，保留你原邏輯） ===== */
 function pickField(rec, key, alias=[]) {
   if(key in rec) return key;
   const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k]));
@@ -239,7 +241,7 @@ function pickField(rec, key, alias=[]) {
 function preprocessVal(v, pre){
   let x=asNum(v);
   if(!isNum(x)) return NaN;
-  if(pre==='percent'){ // 0~1 或 0~100% 皆可
+  if(pre==='percent'){
     if(String(v).includes('%')) x = x/100;
     if(x>1) x = x/100;
   }
@@ -247,7 +249,6 @@ function preprocessVal(v, pre){
   return x;
 }
 function evalCond(x, cond){
-  // 支援：>=, <=, >, <, ==, !=, between a..b / [a,b]
   if(!isNum(x)) return false;
   const s=String(cond).trim();
   const m1=s.match(/^(>=|<=|>|<|==|=|!=)\s*(-?\d+(\.\d+)?)$/);
@@ -262,12 +263,11 @@ function evalCond(x, cond){
   }
   const m2=s.match(/^(between|range)\s+(-?\d+(\.\d+)?)\s*(\.{2}|,|~|to|-)\s*(-?\d+(\.\d+)?)$/i);
   if(m2){ const a=Number(m2[2]), b=Number(m2[5]); return x>=Math.min(a,b) && x<=Math.max(a,b); }
-  const m3=s.match(/^\[\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\]$/); // [a,b]
+  const m3=s.match(/^\[\s*(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)\s*\]$/);
   if(m3){ const a=Number(m3[1]), b=Number(m3[3]); return x>=a && x<=b; }
   return false;
 }
 function scoreByRule(x, feature){
-  // rule: [{if:'>=0.3', score:1}, ...] 取第一個命中；或 bins/table
   if(!isNum(x)) return 0;
   if(Array.isArray(feature.rule)){
     for(const r of feature.rule){ if(r && evalCond(x, r.if)) return Number(r.score)||0; }
@@ -282,14 +282,14 @@ function scoreByRule(x, feature){
   }
   return 0;
 }
-function computeScore(rec, block){ // block= RULES.compute.R 或 .A
+function computeScore(rec, block){
   if(!block || !Array.isArray(block.features) || !block.features.length) return null;
   let sum=0, wsum=0;
   for(const f of block.features){
     const field = pickField(rec, f.key, f.alias||[]);
     const raw = field? rec[field] : null;
     const val = preprocessVal(raw, f.preprocess);
-    const s = scoreByRule(val, f); // 0..1
+    const s = scoreByRule(val, f);
     const w = Number(f.weight)||0;
     sum += s * w;
     wsum += w;
@@ -335,12 +335,11 @@ function process(){
     let R=null, A=null, reason='';
 
     if(hasComputeR || hasComputeA){
-      // 前端計算
       R = hasComputeR ? computeScore(rec, RULES.compute.R) : null;
       A = hasComputeA ? computeScore(rec, RULES.compute.A) : null;
       reason = 'compute(JSON)';
     }
-    if((R===null || A===null)){ // 任一缺 -> 嘗試從 CSV 補
+    if((R===null || A===null)){
       const ra = pickRAfromCSV(rec);
       if(ra){ if(R===null) R=ra.R; if(A===null) A=ra.A; reason += (reason?'+':'')+'csv(R/A)'; }
     }
@@ -427,7 +426,7 @@ function renderTable(){
   tbl.appendChild(body);
 }
 
-/* 匯出（只匯出已分群） */
+/* 既有 CSV 匯出（只匯出已分群） */
 function toCSV(arr){
   if(!arr.length) return '';
   const cm=coreMap(); const cols=['客戶代號','客群','R','A','象限']; const hdr=cols.join(',');
@@ -441,7 +440,7 @@ el('#btnDownload').onclick=()=>{
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_scored.csv'; a.click();
 };
 
-/* 診斷面板（顯示 JSON 來源、是否採用前端計分等） */
+/* 診斷面板 */
 function renderDiagnostics(){
   const cm=coreMap();
   const hasCompR=!!(RULES?.compute?.R?.features?.length);
@@ -466,7 +465,74 @@ el('#selEntity').onchange=()=>process();
 el('#selPage').onchange=()=>renderTable();
 
 document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); render(); });
+
+/* ===== ✅ 新增功能：匯出「計算後」Excel（保留版面，不改既有流程） ===== */
+(function(){
+  // 從 enriched 陣列匯出（含原始欄位 + 計分欄位）；若 enriched 為空，退回匯出畫面表格
+  function exportDecisionXLSX(){
+    const arr = (Array.isArray(enriched) && enriched.length)? enriched : null;
+    if(arr){
+      // 1) 組輸出列（含 R/A 與矩陣欄位；保留原欄位）
+      let rows = arr.map(rec=>{
+        const o = {};
+        if ('__id' in rec)        o['客戶代號']=rec['__id'];               // 若你想用原欄名可改回 id
+        if ('entity' in rec)      o['客群']= (rec.entity==='corp'?'法人':'自然人');
+        if (isNum(rec.R))         o['R_score']=rec.R;
+        if (isNum(rec.A))         o['A_score']=rec.A;
+        if ('__state' in rec)     o['狀態']=rec.__state;
+        if ('cell' in rec)        o['matrix_key']=rec.cell;
+        if ('cell' in rec)        o['matrix_title']=getTitle(rec.cell);
+
+        // 將原始欄位也帶上（避免遺漏）
+        Object.keys(rec).forEach(k=>{
+          if(/^(__|excluded)$/.test(k)) return; // 跳過內部欄
+          if(!(k in o)) o[k]=rec[k];
+        });
+        return o;
+      });
+
+      // 2) 欄位順序優化：重要欄置前
+      const head=['客戶代號','客群','R_score','A_score','狀態','matrix_key','matrix_title'];
+      rows = rows.map(r=>{
+        const out={}; head.forEach(h=>{ if(h in r) out[h]=r[h]; });
+        Object.keys(r).forEach(k=>{ if(!(k in out)) out[k]=r[k]; });
+        return out;
+      });
+
+      // 3) 轉為工作簿並下載
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = Object.keys(rows[0]||{}).map(()=>({wch:14}));
+      XLSX.utils.book_append_sheet(wb, ws, 'decision_result');
+
+      // 4) Metadata（可選）
+      try{
+        const meta=[{
+          rules_loaded: !!(RULES),
+          rules_source: RULES_URL_INUSE||'',
+          exported_at: new Date().toISOString()
+        }];
+        const wsMeta = XLSX.utils.json_to_sheet(meta);
+        XLSX.utils.book_append_sheet(wb, wsMeta, 'metadata');
+      }catch(e){/* ignore */}
+
+      XLSX.writeFile(wb, 'decision_matrix_result.xlsx');
+      return;
+    }
+
+    // enriched 不存在 → 匯出畫面表格
+    const table = document.getElementById('resultTbl');
+    if(!table){ alert('沒有可匯出的資料（請先載入 CSV 並完成計算）'); return; }
+    const wb2 = XLSX.utils.book_new();
+    const ws2 = XLSX.utils.table_to_sheet(table, {raw:true});
+    XLSX.utils.book_append_sheet(wb2, ws2, 'decision_result');
+    XLSX.writeFile(wb2, 'decision_matrix_result.xlsx');
+  }
+
+  // 綁定新按鈕
+  const btn = document.getElementById('btnXLSX');
+  if(btn) btn.addEventListener('click', exportDecisionXLSX);
+})();
 </script>
 </body>
 </html>
-
