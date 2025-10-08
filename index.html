@@ -5,21 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>AI 潛力客智選導航 </title>
 <style>
-  /* ===== 主題色票（保留 --grid-border 以不影響矩陣） ===== */
+  /* ===== 主題色票（柔順橘金漸層 + 對比優化） ===== */
   :root{
-    --bg-grad: linear-gradient(180deg,#f65b3d 0%,#f57c54 30%,#f89a6c 60%,#f8b88d 100%); /* 暖橘漸層 */
+    --bg-grad: linear-gradient(180deg,
+      #f75e3d 0%,
+      #f97c52 25%,
+      #fba068 55%,
+      #fbc48c 80%,
+      #fde1b3 100%
+    ); /* 橘紅→金橘→淡橘→米橘的平滑漸層 */
+
     --panel:#ffffff;         /* 面板白底 */
     --muted:#8b8b8b;         /* 次要文字（中灰） */
     --text:#2b2b2b;          /* 主要文字（深灰） */
     --brand:#e64b2e;         /* 橘紅主色（按鈕/強調） */
     --chip:#ffe4d0;          /* 晶片淡杏橘 */
-    --grid-border:#2a355c;   /* 保持原值：供矩陣邊框使用 */
+    --grid-border:#2a355c;   /* 保留原矩陣邊框色 */
   }
 
   html,body{height:100%}
   body{
     margin:0;
-    background:var(--bg-grad);          /* 改為暖橘漸層 */
+    background:var(--bg-grad);
     color:var(--text);
     font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto;
   }
@@ -29,7 +36,7 @@
   /* 徽章：淡橘底＋橘紅字 */
   .badge{
     display:inline-flex;gap:8px;align-items:center;
-    background:var(--chip); color:var(--brand);
+    background:var(--chip);color:var(--brand);
     padding:6px 10px;border-radius:999px;border:1px solid #f3a689;
   }
 
@@ -65,7 +72,7 @@
   }
 
   .kv{display:flex;gap:10px;align-items:center}
-  .kv .k{color:#b16a4f}  /* 駝棕，與暖橘系協調 */
+  .kv .k{color:#b16a4f}
 
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .right{margin-left:auto}
@@ -82,7 +89,7 @@
 
   footer{opacity:.7;margin:24px 0 40px}
 
-  /* ===== 矩陣（完全保留原樣式與色系，不做變更） ===== */
+  /* ===== 矩陣（僅調整一般接觸第1級底色） ===== */
   :root{ --side-w:56px;--head-h:56px; --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr; --row-h-H:112px;--row-h-M:112px;--row-h-L:112px; }
   .matrix-wrapper{
     display:grid; grid-template-columns: var(--side-w) 1fr 1fr 1fr; grid-template-rows: var(--head-h) 112px 112px 112px;
@@ -93,7 +100,10 @@
   .cell h4{margin:0 0 6px;font-size:14px;color:#000}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 8px;font-weight:600;background:#000;color:#fff;border:1px solid #000}
   .num{font-size:22px;font-weight:700;color:#000}
-  .tone-imm{background:#fbc37a} .tone-nor{background:#f7a45a} .tone-warm{background:#fff1c7}
+  /* 調整色系：立即接觸、一般接觸(第1級) 同底色 */
+  .tone-imm{background:#fbc37a}
+  .tone-nor{background:#fbc37a}
+  .tone-warm{background:#fff1c7}
   .zbar{margin-top:8px;background:#f5f7fa;color:#000;border:1px solid var(--grid-border);border-radius:8px;padding:10px;text-align:center;font-weight:700;cursor:pointer}
 
   /* ===== 表格（暖橘表頭＋淺橘邊） ===== */
@@ -125,8 +135,7 @@
     <div class="hero">
       <span class="badge">前端計分｜JSON 規則</span>
       <div>
-        <h1>開發潛力名單決策矩陣（HTML 依 JSON 計算 R/A）</h1>
-        <p class="muted">上傳 CSV / XLSX（不用帶 R/A），本頁依 JSON 規則自動計分與分群；若 JSON 沒提供計分規則，則 fallback 讀資料檔中的 R/A。</p>
+        <h1>開發潛力名單決策矩陣</h1>
       </div>
     </div>
 
