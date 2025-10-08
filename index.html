@@ -183,7 +183,7 @@ async function loadRules(){
     try{
       const res=await fetch(url+'?v='+Date.now(),{cache:'no-store'}); if(!res.ok){lastErr='HTTP '+res.status; continue;}
       const text=await res.text();
-      const raw=JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,'')); // 去註解
+      const raw=JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,''));
 
       // 尋找節點
       const node=(function find(o){
@@ -205,7 +205,7 @@ async function loadRules(){
       RULES={ cut, labels, mapping, compute, natural, corporate };
       RULES_URL_INUSE=url;
 
-      // ✅ 新增：把 v1.3 的 natural/corporate.features 轉成 compute.R/A
+      // 轉接器：把 v1.3 的 natural/corporate.features → compute.R/A
       buildComputeFromV13(RULES);
 
       clearWarn(); return;
@@ -214,7 +214,7 @@ async function loadRules(){
   RULES=null; warn('規則載入失敗：'+lastErr+'。來源已全部嘗試：\n'+RULES_SOURCES.join('\n'));
 }
 
-/* ===== 2.5) v1.3 → compute 轉接器（只處理權重皆為正的情境；R/A 分側） ===== */
+/* ===== 2.5) v1.3 → compute 轉接器（R/A 分側；權重皆為正） ===== */
 function normHdr(s){ return String(s||'').trim().replace(/\s+/g,''); }
 function pickKeyFrom(rec, key, aliases=[]) {
   const want = new Set([normHdr(key), ...aliases.map(normHdr)]);
@@ -223,29 +223,15 @@ function pickKeyFrom(rec, key, aliases=[]) {
   }
   return key;
 }
-
-/** 將 v1.3 features 轉為 compute.R/A.features
- * 支援類型：
- *  - categorical_map  → table
- *  - numeric_bins*    → bins (min/max/score)
- *  - rules            → rule [{if, score}]
- * 權重：
- *  - weight 可為數字或 {R,A}；此處取各自側的數字（你目前皆為正）。
- * 實體適用：
- *  - 來源自 natural.features → entity='natural'
- *  - 來源自 corporate.features → entity='corp'
- */
 function buildComputeFromV13(R){
-  // 若本來就有 compute 就沿用，但也嘗試補上缺的那一側
   const comp = R.compute || {R:{features:[]}, A:{features:[]}};
   if(!comp.R) comp.R = {features:[]};
   if(!comp.A) comp.A = {features:[]};
 
   const pushFeat = (side, srcFeat, originEntity) => {
-    // 解析權重
     const w = (typeof srcFeat.weight==='object') ? (side==='R'? srcFeat.weight.R : srcFeat.weight.A) : srcFeat.weight;
     const wNum = Number(w);
-    if(!Number.isFinite(wNum) || wNum<=0) return; // 權重需為正數（你的前提）
+    if(!Number.isFinite(wNum) || wNum<=0) return;
 
     const sc = srcFeat.score || {};
     const f = {
@@ -253,23 +239,18 @@ function buildComputeFromV13(R){
       label: srcFeat.label || srcFeat.key,
       aliases: Array.isArray(srcFeat.aliases)? srcFeat.aliases.slice(0):[],
       weight: wNum,
-      entity: originEntity // 'natural' | 'corp'
+      entity: originEntity
     };
 
-    // 分數型態映射
     const type = String(sc.type||'').toLowerCase();
 
-    // 1) 類別對映
     if(type==='categorical_map' && sc.map && typeof sc.map==='object'){
-      f.preprocess = 'raw';      // 讓後續不轉數字
-      f.table = sc.map;          // 直接字串比對
+      f.preprocess = 'raw';
+      f.table = sc.map;
       comp[side].features.push(f);
       return;
     }
-
-    // 2) 數值分箱
     if(type.startsWith('numeric_bins') && Array.isArray(sc.bins) && sc.bins.length){
-      // bins 可能是 {min,max,score} 或 {op,th/hi,score}；統一轉成 min/max
       const bins = [];
       for(const b of sc.bins){
         if(('min' in b) || ('max' in b)){
@@ -290,22 +271,17 @@ function buildComputeFromV13(R){
       }
       if(bins.length){
         f.bins = bins;
-        // 可選：若 bins 單位是 %，可在 JSON 用 preprocess:'percent' 標示，此處原樣帶出
         if(typeof sc.preprocess==='string') f.preprocess = sc.preprocess;
         comp[side].features.push(f);
         return;
       }
     }
-
-    // 3) 規則 if/score
     if(Array.isArray(sc.rules) && sc.rules.length){
       f.rule = sc.rules.map(r=>({ if:String(r.if||'').trim(), score:Number(r.score)||0 }));
       if(typeof sc.preprocess==='string') f.preprocess = sc.preprocess;
       comp[side].features.push(f);
       return;
     }
-
-    // 4) 其餘型別尚未支援 → 略過（不影響其他特徵）
   };
 
   const nat = Array.isArray(R.natural?.features)? R.natural.features : [];
@@ -331,22 +307,43 @@ function csvParse(text){
   return rows.filter(r=>r.some(x=>x!=='')).map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
 }
 
-/* ===== 4) 欄位對應 & 常用欄位 ===== */
+/* ===== 4) 欄位對應 & 常用欄位（補：換行/別名/負面名單） ===== */
 function coreMap(){
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const h=new Map(CURRENT_HEADERS.map(x=>[kNorm(x),x]));
   const pick=(...c)=>{ for(const s of c){ const k=h.get(kNorm(s)); if(k) return k; } return c[0]; };
-  return { id:pick('客戶代號','客戶id','id','客編'),
-           name:pick('客戶名稱','名稱','name'),
-           entity:pick('自然人/非自然人','客群','entity'),
-           blacklist:pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','blacklist') };
+  return {
+    id:       pick('客戶代號','客戶代號\n','客戶id','id','客編'),
+    name:     pick('客戶名稱','名稱','name'),
+    entity:   pick('自然人/非自然人','自然人/\n非自然人','客群','entity'),
+    // 黑名單 / 負面名單的常見寫法
+    blacklist:pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','負面名單','BLACKLIST')
+  };
 }
-function isExcluded(rec){ const cm=coreMap(); const v=String(rec[cm.blacklist]||'').trim(); return /^(1|true|y|是)$/i.test(v); }
+function isExcluded(rec){
+  const cm=coreMap();
+  const v=String(rec[cm.blacklist]||'').trim();
+  return /^(1|true|y|yes|是|true|True)$/i.test(v);
+}
+
+/* ===== 自動判別自然人 / 法人（含「非自然人」） ===== */
 function inferEntity(rec){
-  const cm=coreMap(); const v=(rec[cm.entity]??'').toString();
-  const alias={'自然人':'natural','個人':'natural','法人':'corp','公司':'corp'}; const e=alias[v]||v.toLowerCase();
-  if(e==='natural'||e==='corp') return e;
-  const hints=['公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','客戶往來業務類別']; return hints.some(k=>k in rec)?'corp':'natural';
+  const cm=coreMap();
+  const raw=(rec[cm.entity] ?? '').toString().trim();
+  const alias={
+    '自然人':'natural','個人':'natural',
+    '法人':'corp','公司':'corp','非自然人':'corp'
+  };
+  const mapped = alias[raw] || raw.toLowerCase();
+  if(mapped==='natural' || mapped==='corp') return mapped;
+
+  // 無標示時：用公司類特徵推斷
+  const corpHints=[
+    '公司營收','成立年限','策略性產業別(ETL)',
+    '客戶等級/授信等級','往來業務多樣性(大類數)',
+    '授信額度使用率_本期','企金授信_額度動用率','企金放款_額度動用率'
+  ];
+  return corpHints.some(k=>k in rec) ? 'corp' : 'natural';
 }
 
 /* ===== 5) 前端計分引擎 ===== */
@@ -358,7 +355,7 @@ function pickField(rec, key, alias=[]) {
   return null;
 }
 function preprocessVal(v, pre){
-  if(pre==='raw') return v;           // ✅ 新增：類別值以原字串處理
+  if(pre==='raw') return v;
   let x=asNum(v);
   if(!isNum(x)) return NaN;
   if(pre==='percent'){
@@ -387,18 +384,15 @@ function evalCond(x, cond){
   return false;
 }
 function scoreByRule(x, feature){
-  // rule：if/score
   if(Array.isArray(feature.rule)){
     for(const r of feature.rule){ if(r && evalCond(asNum(x), r.if)) return Number(r.score)||0; }
     return 0;
   }
-  // bins：min/max/score
   if(Array.isArray(feature.bins)){
     const xv = asNum(x); if(!isNum(xv)) return 0;
     for(const b of feature.bins){ const lo=('min' in b)? Number(b.min):-Infinity; const hi=('max' in b)? Number(b.max):Infinity; if(xv>=lo && xv<=hi) return Number(b.score)||0; }
     return 0;
   }
-  // table：字串對映
   if(feature.table && typeof feature.table==='object'){
     const key = String(x ?? '');
     if(Object.prototype.hasOwnProperty.call(feature.table, key)) return Number(feature.table[key])||0;
@@ -418,8 +412,8 @@ function computeScore(rec, block, entity){
     const field = pickField(rec, f.key, f.alias||f.aliases||[]);
     const raw = field? rec[field] : null;
     const val = preprocessVal(raw, f.preprocess);
-    const s = scoreByRule(val, f);   // → 0~1
-    const w = Number(f.weight)||0;   // 正數（你的設定）
+    const s = scoreByRule(val, f);
+    const w = Number(f.weight)||0;
     if(w<=0) continue;
     sum += s * w;
     wsum += w;
@@ -429,7 +423,7 @@ function computeScore(rec, block, entity){
   return clamp(Math.round(scaled), 0, 100);
 }
 
-/* fallback：CSV 直接提供 R/A 時 */
+/* fallback：CSV 若已提供 R/A */
 function pickRAfromCSV(rec){
   const ms=RULES?.mapping?.score||{};
   const keys=Object.keys(rec); const idx=new Map(keys.map(k=>[kNorm(k),k]));
@@ -556,7 +550,7 @@ function renderTable(){
   tbl.appendChild(body);
 }
 
-/* 既有 CSV 匯出（只匯出已分群） */
+/* 匯出（只匯出已分群） */
 function toCSV(arr){
   if(!arr.length) return '';
   const cm=coreMap(); const cols=['客戶代號','客群','R','A','象限']; const hdr=cols.join(',');
