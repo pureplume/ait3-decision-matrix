@@ -61,7 +61,34 @@
     border-top:1px dashed #f3bda0;
     display:flex; gap:8px; flex-wrap:wrap;
   }
+  /* ===== 診斷 & 篩選（橘色金融風格） ===== */
+#filters{display:flex;flex-direction:column;gap:10px}
+.chiprow{display:flex;flex-wrap:wrap;gap:12px}
 
+/* 橘色晶片：淡橘底、淺橘描邊、橘紅字 */
+#filters .chip{
+  background:#fff0e5;
+  border:1px solid #f3bda0;
+  color:#b23a1f;
+  border-radius:999px;
+  padding:8px 14px;
+  cursor:pointer;
+  box-shadow:0 1px 0 rgba(0,0,0,.04) inset;
+}
+
+/* hover：微加亮、不改字色 */
+#filters .chip:hover{
+  background:#ffe7d5;
+  filter:none;
+}
+
+/* active：品牌橘外框＋更實的淡橘底 */
+#filters .chip.active{
+  outline:2px solid var(--brand);   /* #e64b2e */
+  background:#ffe0d0;
+  border-color:#f09f7a;
+  color:#a13318;
+}
   /* ===== 矩陣（僅調整一般接觸第1級底色） ===== */
   :root{ --side-w:56px;--head-h:56px; --col-w-L:1fr;--col-w-M:1fr;--col-w-H:1fr; --row-h-H:112px;--row-h-M:112px;--row-h-L:112px; }
   .matrix-wrapper{
@@ -438,17 +465,38 @@ function render(){
   renderFilterChips(); highlightFilter(); renderTable(); renderDiagnostics();
 }
 function renderFilterChips(){
-  const cont=el('#filters'); cont.innerHTML='';
-  const mk=(text,val)=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=text; b.onclick=()=>{viewFilter=val; renderTable(); highlightFilter();}; return b; };
+  const cont = el('#filters');
+  cont.innerHTML = '';
+
+  const mk=(text,val)=>{
+    const b=document.createElement('button');
+    b.className='chip';
+    b.textContent=text;
+    b.onclick=()=>{ viewFilter=val; renderTable(); highlightFilter(); };
+    return b;
+  };
+
+  // 第 1 排：顯示全部／未評分／合規排除
   const r1=document.createElement('div'); r1.className='chiprow';
   r1.appendChild(mk('顯示全部','ALL'));
-  ['HL','HM','HH'].forEach(k=>r1.appendChild(mk(getTitle(k),k)));
+  r1.appendChild(mk('未評分','UNSCORED'));
+  r1.appendChild(mk('合規排除','Z'));
+  cont.appendChild(r1);
+
+  // 第 2 排：立即接觸（第3→1級）HL/HM/HH
   const r2=document.createElement('div'); r2.className='chiprow';
-  ['ML','MM','MH'].forEach(k=>r2.appendChild(mk(getTitle(k),k)));
+  ['HL','HM','HH'].forEach(k=> r2.appendChild(mk(getTitle(k),k)));
+  cont.appendChild(r2);
+
+  // 第 3 排：一般接觸（第3→1級）ML/MM/MH
   const r3=document.createElement('div'); r3.className='chiprow';
-  ['LL','LM','LH'].forEach(k=>r3.appendChild(mk(getTitle(k),k)));
-  r3.appendChild(mk('未評分','UNSCORED')); r3.appendChild(mk('合規排除','Z'));
-  cont.appendChild(r1); cont.appendChild(r2); cont.appendChild(r3);
+  ['ML','MM','MH'].forEach(k=> r3.appendChild(mk(getTitle(k),k)));
+  cont.appendChild(r3);
+
+  // 第 4 排：後續接觸（第3→1級）LL/LM/LH
+  const r4=document.createElement('div'); r4.className='chiprow';
+  ['LL','LM','LH'].forEach(k=> r4.appendChild(mk(getTitle(k),k)));
+  cont.appendChild(r4);
 }
 function highlightFilter(){
   [...document.querySelectorAll('#filters .chip')].forEach(b=>{
