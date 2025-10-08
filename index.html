@@ -63,7 +63,7 @@
       <span class="badge">前端計分｜JSON 規則</span>
       <div>
         <h1>開發潛力名單決策矩陣（HTML 依 JSON 計算 R/A）</h1>
-        <p class="muted">上傳任意 CSV/XLSX/JSON；本頁會依 JSON 規則自動計分與分群；若 JSON 沒提供計分規則，則 fallback 讀 CSV/XLSX 的 R/A。</p>
+        <p class="muted">上傳 CSV / XLSX（不用帶 R/A），本頁依 JSON 規則自動計分與分群；若 JSON 沒提供計分規則，則 fallback 讀資料檔中的 R/A。</p>
       </div>
     </div>
 
@@ -72,8 +72,8 @@
 
     <div class="panel" id="uploader">
       <div class="row">
-        <label class="file" for="csvFile">📄 匯入 CSV / XLSX / JSON</label>
-        <input id="csvFile" type="file" accept=".csv,.xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" />
+        <label class="file" for="csvFile">📄 匯入 CSV / XLSX</label>
+        <input id="csvFile" type="file" accept=".csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" />
         <button class="btn" id="btnClear">清空</button>
         <div class="right kv">
           <span class="k">統計：</span>
@@ -84,7 +84,7 @@
       </div>
       <div class="row" style="margin-top:10px">
         <div class="notice">
-          <b>最小欄位：</b>客戶代號（必填），其它欄位名稱需和 JSON 的 features.key 對得上（或用 mapping.alias 對應）。工作表可為「自然人 / 非自然人」兩頁。
+          <b>建議檔案：</b>CSV 請用 UTF-8（最好 UTF-8-SIG）或 XLSX。表頭需能對上 JSON 的 features.key（或 aliases）。
         </div>
       </div>
     </div>
@@ -147,11 +147,11 @@
       </div>
     </div>
 
-    <footer>© 2025 AIT3 • 前端計分 • JSON 為唯一規則來源（可 fallback CSV/XLSX R/A）</footer>
+    <footer>© 2025 AIT3 • 前端計分 • JSON 為唯一規則來源（可 fallback 檔案 R/A）</footer>
   </div>
 
 <script>
-/* ===== 0) JSON 規則來源（依序嘗試；可被本地上傳覆蓋） ===== */
+/* ===== 0) JSON 規則來源（依序嘗試） ===== */
 const RULES_SOURCES = [
   './rules.latest.json',
   'https://raw.githubusercontent.com/pureplume/ait3-rules/main/rules.latest.json'
@@ -176,7 +176,7 @@ const kNorm=s=>String(s||'').toLowerCase().replace(/\uFEFF/g,'').replace(/\r?\n/
 function warn(msg){ el('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
 function clearWarn(){ el('#errBox').innerHTML = ''; }
 
-/* ===== 2) 載入 JSON（支援新舊結構；允許註解；可本地覆蓋） ===== */
+/* ===== 2) 載入 JSON（允許註解；抽出節點；建 compute） ===== */
 async function loadRules(){
   let lastErr='';
   for(const url of RULES_SOURCES){
@@ -191,21 +191,7 @@ async function loadRules(){
   }
   RULES=null; warn('規則載入失敗：'+lastErr+'。來源已全部嘗試：\n'+RULES_SOURCES.join('\n'));
 }
-function loadRulesFromObject(rawObj, srcName='(local JSON)'){
-  try{
-    RULES = normalizeRules(rawObj);
-    RULES_URL_INUSE = srcName;
-    clearWarn();
-    renderDiagnostics();
-    process();
-  }catch(e){
-    warn('本地 JSON 規則解析失敗：'+e.message);
-  }
-}
-
-/* ===== 2.5) v1.3 正規化 → compute R/A + labels/cut/mapping ===== */
 function normalizeRules(raw){
-  // 找到主節點
   const node=(function find(o){
     if(!o||typeof o!=='object') return null;
     if((o.cut||o.matrix) && (o.labels||o.matrix?.labels)) return o;
@@ -225,16 +211,14 @@ function normalizeRules(raw){
   return R;
 }
 
-/* ===== 2.6) v1.3 → compute 轉接器（完整型別支援） ===== */
+/* ===== 2.5) v1.3 → compute 轉接器（支援 R/A 權重、類別/分箱/規則/差額/百分比等） ===== */
 function buildComputeFromV13(R){
   const comp = R.compute || {R:{features:[]}, A:{features:[]}};
   if(!comp.R) comp.R = {features:[]};
   if(!comp.A) comp.A = {features:[]};
-
-  const push = (side, f)=>{ if(!f) return; comp[side].features.push(f); };
+  const push = (side, f)=>{ if(f) comp[side].features.push(f); };
 
   const convertBinsByThresholds = (pairs) => {
-    // e.g. [[3000000,1.0],[1000000,0.7]...] (遞減門檻)
     if(!Array.isArray(pairs)) return null;
     const out=[];
     for(let i=0;i<pairs.length;i++){
@@ -244,112 +228,62 @@ function buildComputeFromV13(R){
     }
     return out;
   };
+  const adapt = (f, entity) => {
+    const sc=f.score||{}, type=String(sc.type||'').toLowerCase();
+    const wR=(typeof f.weight==='object')? Number(f.weight.R||0):Number(f.weight||0);
+    const wA=(typeof f.weight==='object')? Number(f.weight.A||0):0;
+    const base={ key:f.key, label:f.label||f.key, aliases:Array.isArray(f.aliases)?f.aliases.slice(0):[], entity };
 
-  const adaptFeature = (srcFeat, originEntity) => {
-    const wR = (typeof srcFeat.weight==='object')? Number(srcFeat.weight.R||0) : Number(srcFeat.weight||0);
-    const wA = (typeof srcFeat.weight==='object')? Number(srcFeat.weight.A||0) : 0;
-    const sc = srcFeat.score || {};
-    const type = String(sc.type||'').toLowerCase();
-
-    const base = {
-      key: srcFeat.key,
-      label: srcFeat.label || srcFeat.key,
-      aliases: Array.isArray(srcFeat.aliases)? srcFeat.aliases.slice(0) : [],
-      entity: originEntity
-    };
-
-    // 類別對映
     if(type==='categorical_map'){
-      const table = sc.mapping || sc.map || {};
-      if(wR>0) push('R', {...base, weight:wR, preprocess:'raw', table});
-      if(wA>0) push('A', {...base, weight:wA, preprocess:'raw', table});
+      const table=sc.mapping||sc.map||{};
+      if(wR>0) push('R',{...base,weight:wR,preprocess:'raw',table});
+      if(wA>0) push('A',{...base,weight:wA,preprocess:'raw',table});
       return;
     }
-
-    // 金額/一般數值分箱
     if(type==='numeric_bins_amt' || type==='numeric_bins' || type==='numeric_step_ge' || type==='numeric_ranges'){
-      const bins = convertBinsByThresholds(sc.bins||sc.steps) || null;
-      if(bins){
-        if(wR>0) push('R', {...base, weight:wR, bins});
-        if(wA>0) push('A', {...base, weight:wA, bins});
-      }
+      const bins = convertBinsByThresholds(sc.bins||sc.steps);
+      if(bins){ if(wR>0) push('R',{...base,weight:wR,bins}); if(wA>0) push('A',{...base,weight:wA,bins}); }
       return;
     }
-
-    // 數量門檻（business_multi）：此處採「只用 count 欄位」
-    if(type==='business_multi'){
-      const steps = sc.steps_by_count || [];
-      const pairs = steps.map(([th,score])=>[th,score]);
-      const bins = convertBinsByThresholds(pairs);
-      // 嘗試以 count_field 或 key 直接對應
-      const countAliases = []; if (sc.count_field) countAliases.push(sc.count_field);
-      if(wR>0) push('R', {...base, weight:wR, bins, aliases:[...(base.aliases||[]), ...countAliases]});
-      if(wA>0) push('A', {...base, weight:wA, bins, aliases:[...(base.aliases||[]), ...countAliases]});
-      return;
-    }
-
-    // 金額差額（上升→R；下降→A）
     if(type==='numeric_bins_amt_diff'){
-      const upPairs = sc.up_bins_twd || sc.up_bins_cnt || [];
-      const downPairs = sc.down_bins_twd || sc.down_bins_cnt || [];
-      const upBins = convertBinsByThresholds(upPairs);
-      const downBins = convertBinsByThresholds(downPairs)?.map(b=>({min:-b.max, max:-b.min, score:b.score})) || null;
-      if(wR>0 && upBins) push('R', {...base, weight:wR, bins:upBins});      // x >= 門檻
-      if(wA>0 && downBins) push('A', {...base, weight:wA, bins:downBins});  // x <= -門檻
+      const upBins=convertBinsByThresholds(sc.up_bins_twd||sc.up_bins_cnt||[]);
+      const downBins=convertBinsByThresholds(sc.down_bins_twd||sc.down_bins_cnt||[])?.map(b=>({min:-b.max,max:-b.min,score:b.score}));
+      if(wR>0&&upBins) push('R',{...base,weight:wR,bins:upBins});
+      if(wA>0&&downBins) push('A',{...base,weight:wA,bins:downBins});
       return;
     }
-
-    // 百分點差（pp）
     if(type==='numeric_bins_pp'){
-      const upPairs = sc.bins_up || [];
-      const downPairs = sc.bins_down || [];
-      const upBins = convertBinsByThresholds(upPairs);
-      const downBins = convertBinsByThresholds(downPairs)?.map(b=>({min:-Infinity, max:b.max, score:b.score})) || null;
-      if(wR>0 && upBins) push('R', {...base, weight:wR, bins:upBins});
-      if(wA>0 && downBins) push('A', {...base, weight:wA, bins:downBins});
+      const up=convertBinsByThresholds(sc.bins_up||[]);
+      const down=convertBinsByThresholds(sc.bins_down||[])?.map(b=>({min:-Infinity,max:b.max,score:b.score}));
+      if(wR>0&&up) push('R',{...base,weight:wR,bins:up});
+      if(wA>0&&down) push('A',{...base,weight:wA,bins:down});
       return;
     }
-
-    // 百分比差（% 或 小數）
     if(type==='numeric_bins_pct_diff'){
-      const upPairs = sc.bins_up_pct || [];
-      const downPairs = sc.bins_down_pct || [];
-      const upBins = convertBinsByThresholds(upPairs);
-      const downBins = convertBinsByThresholds(downPairs)?.map(b=>({min:-Infinity, max:b.max, score:b.score})) || null;
-      if(wR>0 && upBins) push('R', {...base, weight:wR, bins:upBins, preprocess:'percent'});
-      if(wA>0 && downBins) push('A', {...base, weight:wA, bins:downBins, preprocess:'percent'});
+      const up=convertBinsByThresholds(sc.bins_up_pct||[]);
+      const down=convertBinsByThresholds(sc.bins_down_pct||[])?.map(b=>({min:-Infinity,max:b.max,score:b.score}));
+      if(wR>0&&up) push('R',{...base,weight:wR,bins:up,preprocess:'percent'});
+      if(wA>0&&down) push('A',{...base,weight:wA,bins:down,preprocess:'percent'});
       return;
     }
-
-    // if/score 規則
-    if(Array.isArray(sc.rules) && sc.rules.length){
-      const rule = sc.rules.map(r=>({if:String(r.if||'').trim(), score:Number(r.score)||0}));
-      if(wR>0) push('R', {...base, weight:wR, rule});
-      if(wA>0) push('A', {...base, weight:wA, rule});
+    if(Array.isArray(sc.rules)&&sc.rules.length){
+      const rule=sc.rules.map(r=>({if:String(r.if||'').trim(),score:Number(r.score)||0}));
+      if(wR>0) push('R',{...base,weight:wR,rule});
+      if(wA>0) push('A',{...base,weight:wA,rule});
       return;
     }
-
-    // 排除（Z）
     if(type==='binary_exclude'){
-      // 記錄到 mapping.core.blacklist 的別名集合，讓 isExcluded 能找到
       R._binary_exclude = R._binary_exclude || [];
-      R._binary_exclude.push({key: srcFeat.key, aliases: (srcFeat.aliases||[]).slice(0)});
+      R._binary_exclude.push({key:f.key,aliases:(f.aliases||[]).slice(0)});
       return;
     }
-
-    // 其他型別：略過
   };
-
-  const nat = Array.isArray(R.natural?.features)? R.natural.features : [];
-  const cor = Array.isArray(R.corporate?.features)? R.corporate.features : [];
-
-  nat.forEach(f=>adaptFeature(f,'natural'));
-  cor.forEach(f=>adaptFeature(f,'corp'));
-
-  R.compute = comp;
+  (Array.isArray(R.natural?.features)?R.natural.features:[]).forEach(f=>adapt(f,'natural'));
+  (Array.isArray(R.corporate?.features)?R.corporate.features:[]).forEach(f=>adapt(f,'corp'));
+  R.compute=comp;
 }
 
-/* ===== 3) 解析 CSV / XLSX / JSON 檔案 ===== */
+/* ===== 3) 解析 CSV / XLSX ===== */
 function csvParse(text){
   const rows=[]; let i=0,field='',row=[],q=false;
   const push=()=>{row.push(field);field=''}; const pushRow=()=>{rows.push(row);row=[]};
@@ -369,11 +303,8 @@ function xlsxParse(arrayBuffer){
   sheetNames.forEach(sn=>{
     const ws = wb.Sheets[sn];
     if(!ws) return;
-    const json = XLSX.utils.sheet_to_json(ws, {raw:true, defval:''}); // 以首列為欄名
+    const json = XLSX.utils.sheet_to_json(ws, {raw:true, defval:''});
     if(!json.length) return;
-    const headers = Object.keys(json[0]||{}).map(normHeader);
-    CURRENT_HEADERS = headers;
-    // 若未提供客群欄位，依工作表名推斷
     const isNat = /自然人/i.test(sn);
     const isCorp = /非自然人|法人/i.test(sn);
     json.forEach(r=>{
@@ -385,10 +316,11 @@ function xlsxParse(arrayBuffer){
       all.push(rec);
     });
   });
+  if(all.length){ CURRENT_HEADERS = Object.keys(all[0]).map(normHeader); }
   return all;
 }
 
-/* ===== 4) 欄位對應 & 常用欄位（補：換行/別名/負面名單/二元排除） ===== */
+/* ===== 4) 欄位對應 & 常用欄位 ===== */
 function coreMap(){
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const h=new Map(CURRENT_HEADERS.map(x=>[kNorm(x),x]));
@@ -402,18 +334,15 @@ function coreMap(){
 }
 function isExcluded(rec){
   const cm=coreMap();
-  const valMain = String(rec[cm.blacklist]??'').trim();
-  const truthy = /^(1|true|y|yes|是|Y)$/i.test(valMain);
-  if(truthy) return true;
-  // 若規則有 binary_exclude 之 key/aliases，也納入判斷
+  const v=String(rec[cm.blacklist]||'').trim();
+  if(/^(1|true|y|yes|是|Y)$/i.test(v)) return true;
   if(Array.isArray(RULES?._binary_exclude)){
     const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k]));
     for(const ex of RULES._binary_exclude){
-      const candidates=[ex.key, ...(ex.aliases||[])];
-      for(const c of candidates){
-        const k = idx.get(kNorm(c)); if(!k) continue;
-        const v = String(rec[k]??'').trim();
-        if(/^(1|true|y|yes|是|Y)$/i.test(v)) return true;
+      for(const c of [ex.key, ...(ex.aliases||[])]){
+        const k=idx.get(kNorm(c)); if(!k) continue;
+        const vv=String(rec[k]??'').trim();
+        if(/^(1|true|y|yes|是|Y)$/i.test(vv)) return true;
       }
     }
   }
@@ -424,10 +353,7 @@ function inferEntity(rec){
   const alias={ '自然人':'natural','個人':'natural', '法人':'corp','公司':'corp','非自然人':'corp' };
   const mapped = alias[raw] || raw.toLowerCase();
   if(mapped==='natural' || mapped==='corp') return mapped;
-  const corpHints=[
-    '公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','往來業務多樣性(大類數)',
-    '授信額度使用率_本期','企金授信_額度動用率','企金放款_額度動用率'
-  ];
+  const corpHints=['公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','往來業務多樣性(大類數)','授信額度使用率_本期','企金授信_額度動用率','企金放款_額度動用率'];
   return corpHints.some(k=>k in rec)? 'corp':'natural';
 }
 
@@ -440,7 +366,7 @@ function pickField(rec, key, alias=[]) {
   return null;
 }
 function preprocessVal(v, pre){
-  if(pre==='raw') return v;           // 類別用原字串
+  if(pre==='raw') return v;
   let x=asNum(v);
   if(!isNum(x)) return NaN;
   if(pre==='percent'){
@@ -494,24 +420,25 @@ function allowEntity(feat, entity){
 }
 function computeScore(rec, block, entity){
   if(!block || !Array.isArray(block.features) || !block.features.length) return null;
-  let sum=0, wsum=0;
+  let sum=0, wsum=0, matched=0;
   for(const f of block.features){
     if(!allowEntity(f, entity)) continue;
     const field = pickField(rec, f.key, f.alias||f.aliases||[]);
-    const raw = field? rec[field] : null;
+    if(!field) continue;
+    const raw = rec[field];
     const val = preprocessVal(raw, f.preprocess);
-    const s = scoreByRule(val, f);   // → 0~1
-    const w = Number(f.weight)||0;   // 可為 R/A 不同權重
+    const s = scoreByRule(val, f);
+    const w = Number(f.weight)||0;
     if(w<=0) continue;
-    sum += s * w;
-    wsum += w;
+    matched++;
+    sum += s * w; wsum += w;
   }
   if(wsum<=0) return null;
   const scaled = 100 * (sum / wsum);
   return clamp(Math.round(scaled), 0, 100);
 }
 
-/* fallback：CSV/XLSX 直接提供 R/A 時 */
+/* fallback：資料檔若已提供 R/A */
 function pickRAfromFileRec(rec){
   const ms=RULES?.mapping?.score||{};
   const keys=Object.keys(rec); const idx=new Map(keys.map(k=>[kNorm(k),k]));
@@ -549,21 +476,20 @@ function process(){
     const entity=(forced==='auto')? inferEntity(rec):forced;
     const excluded=isExcluded(rec);
 
-    let R=null, A=null, reason='';
+    let R=null, A=null;
 
     if(hasComputeR || hasComputeA){
       R = hasComputeR ? computeScore(rec, RULES.compute.R, entity) : null;
       A = hasComputeA ? computeScore(rec, RULES.compute.A, entity) : null;
-      reason = 'compute(JSON)';
     }
     if((R===null || A===null)){
       const ra = pickRAfromFileRec(rec);
-      if(ra){ if(R===null) R=ra.R; if(A===null) A=ra.A; reason += (reason?'+':'')+'file(R/A)'; }
+      if(ra){ if(R===null) R=ra.R; if(A===null) A=ra.A; }
     }
 
     const cell = (excluded || !isNum(R) || !isNum(A)) ? null : decideCell(R,A);
     const state = excluded? 'Z' : (cell? 'SCORED' : 'UNSCORED');
-    return {...rec, entity, excluded, R, A, cell, __state:state, __id:rec[cm.id], __reason:reason||'n/a'};
+    return {...rec, entity, excluded, R, A, cell, __state:state, __id:rec[cm.id]};
   });
 
   render();
@@ -624,7 +550,7 @@ function highlightFilter(){
 }
 function renderTable(){
   const tbl=el('#resultTbl'), cm=coreMap();
-  const headers=['客戶代號','客群','R(推薦)','A(關注)','狀態/象限','來源'];
+  const headers=['客戶代號','客群','R(推薦)','A(關注)','狀態/象限'];
   let rows;
   if(viewFilter==='ALL') rows=enriched;
   else if(viewFilter==='Z') rows=enriched.filter(r=>r.__state==='Z');
@@ -637,7 +563,7 @@ function renderTable(){
   rows.slice(0,limit).forEach(r=>{
     const entityTxt=r.entity==='corp'?'法人':'自然人';
     const status = r.__state==='Z' ? `Z｜${getTitle('Z')}` : (r.__state==='UNSCORED'?'未評分': getTitle(r.cell));
-    const vals=[ r[cm.id], entityTxt, isNum(r.R)?r.R+'%':'', isNum(r.A)?r.A+'%':'', status, r.__reason ];
+    const vals=[ r[cm.id], entityTxt, isNum(r.R)?r.R+'%':'', isNum(r.A)?r.A+'%':'', status ];
     const tr=document.createElement('tr'); tr.innerHTML=vals.map(v=>`<td>${v??''}</td>`).join(''); body.appendChild(tr);
   });
   tbl.appendChild(body);
@@ -657,40 +583,49 @@ el('#btnDownload').onclick=()=>{
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='decision_matrix_scored.csv'; a.click();
 };
 
-/* 診斷面板 */
+/* 診斷面板（新增「未命中特徵」提示） */
+function auditCoverage(){
+  const hset=new Set(CURRENT_HEADERS.map(kNorm));
+  const missR=[], missA=[], hitR=[], hitA=[];
+  (RULES?.compute?.R?.features||[]).forEach(f=>{
+    const ok = !!(hset.has(kNorm(f.key)) || (f.aliases||f.alias||[]).some(a=>hset.has(kNorm(a))));
+    (ok?hitR:missR).push(f.key);
+  });
+  (RULES?.compute?.A?.features||[]).forEach(f=>{
+    const ok = !!(hset.has(kNorm(f.key)) || (f.aliases||f.alias||[]).some(a=>hset.has(kNorm(a))));
+    (ok?hitA:missA).push(f.key);
+  });
+  return {missR, missA, hitR, hitA};
+}
 function renderDiagnostics(){
   const cm=coreMap();
   const hasCompR=!!(RULES?.compute?.R?.features?.length);
   const hasCompA=!!(RULES?.compute?.A?.features?.length);
   const mode = (hasCompR||hasCompA) ? '前端計分（JSON compute）' : 'fallback：讀 檔案 R/A';
+  const cov = auditCoverage();
+  const missTxt = (arr)=> arr.length? arr.slice(0,8).join('、') + (arr.length>8?'…':'') : '（無）';
   el('#diagBox').innerHTML = `
     <div class="notice">
       <b>規則檢核</b>
       <div class="kvline">規則來源：<code>${RULES_URL_INUSE||'（未載入）'}</code></div>
       <div class="kvline">模式：<b>${mode}</b></div>
       <div class="kvline">核心欄位：客戶代號 <code>${cm.id}</code>／客群 <code>${cm.entity}</code>／黑名單 <code>${cm.blacklist}</code></div>
-      <div class="kvline">R features：<code>${hasCompR ? RULES.compute.R.features.length : 0}</code>；A features：<code>${hasCompA ? RULES.compute.A.features.length : 0}</code></div>
-      <div class="kvline">提示：欄位需與 <code>features[].key</code> 或其 <code>aliases</code> 對得上；缺值視為 0 分。</div>
+      <div class="kvline">R 特徵命中/總數：<b>${(cov.hitR||[]).length}</b> / <b>${(RULES?.compute?.R?.features||[]).length}</b>；缺少：<code>${missTxt(cov.missR)}</code></div>
+      <div class="kvline">A 特徵命中/總數：<b>${(cov.hitA||[]).length}</b> / <b>${(RULES?.compute?.A?.features||[]).length}</b>；缺少：<code>${missTxt(cov.missA)}</code></div>
+      <div class="kvline">提示：若命中為 0，代表欄名對不到，請調整 CSV/XLSX 表頭或在 JSON 的 feature 加 <code>aliases</code>。</div>
     </div>`;
 }
 
-/* ===== 9) 事件 & 啟動（同一輸入支援 CSV / XLSX / JSON） ===== */
+/* ===== 9) 事件 & 啟動（只支援 CSV / XLSX） ===== */
 async function handleInputFile(file){
   if(!file) return;
   const name=(file.name||'').toLowerCase();
   try{
-    if(name.endsWith('.json')){
-      const text = await file.text();
-      const raw = JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,''));
-      loadRulesFromObject(raw, file.name);
-      return;
-    }
     if(name.endsWith('.xlsx')){
       const buf = await file.arrayBuffer();
       dataRows = xlsxParse(buf);
       process(); return;
     }
-    // default: csv
     const text=await file.text();
     dataRows=csvParse(text); process();
   }catch(e){
@@ -703,7 +638,7 @@ el('#selEntity').onchange=()=>process();
 el('#selPage').onchange=()=>renderTable();
 document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); render(); });
 
-/* ===== 匯出 Excel（保留你原本功能） ===== */
+/* ===== 匯出 Excel ===== */
 (function(){
   function exportDecisionXLSX(){
     const arr = (Array.isArray(enriched) && enriched.length)? enriched : null;
