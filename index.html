@@ -433,13 +433,12 @@ function process(){
 
 /* ===== 8) UI ===== */
 function applyHeadersFromCuts(){
-  const c=RULES?.cut||{R:{hi:70,mid:40},A:{hi:70,mid:40}};
-  el('#ahL').textContent=`關注低 (<${c.A.mid})`;
-  el('#ahM').textContent=`關注中 (${c.A.mid}–${c.A.hi-1})`;
-  el('#ahH').textContent=`關注高 (≥${c.A.hi})`;
-  el('#rhH').textContent=`推薦高 (≥${c.R.hi})`;
-  el('#rhM').textContent=`推薦中 (${c.R.mid}–${c.R.hi-1})`;
-  el('#rhL').textContent=`推薦低 (<${c.R.mid})`;
+  el('#ahL').textContent = '關注低';
+  el('#ahM').textContent = '關注中';
+  el('#ahH').textContent = '關注高';
+  el('#rhH').textContent = '推薦高';
+  el('#rhM').textContent = '推薦中';
+  el('#rhL').textContent = '推薦低';
 }
 function groupBy(arr, key){ const m={}; for(const x of arr){ const k=typeof key==='function'? key(x): x[key]; (m[k]||(m[k]=[])).push(x);} return m; }
 function render(){
