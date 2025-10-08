@@ -54,7 +54,7 @@
   #filters .chip.active{outline:2px solid var(--brand)}
 </style>
 
-<!-- 匯出 Excel（維持你原有功能） -->
+<!-- 匯出 Excel + 讀取 XLSX -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -63,7 +63,7 @@
       <span class="badge">前端計分｜JSON 規則</span>
       <div>
         <h1>開發潛力名單決策矩陣（HTML 依 JSON 計算 R/A）</h1>
-        <p class="muted">上傳任意 CSV（不用帶 R/A），本頁會依 JSON 規則自動計分與分群；若 JSON 沒提供計分規則，則 fallback 讀 CSV 的 R/A。</p>
+        <p class="muted">上傳任意 CSV/XLSX/JSON；本頁會依 JSON 規則自動計分與分群；若 JSON 沒提供計分規則，則 fallback 讀 CSV/XLSX 的 R/A。</p>
       </div>
     </div>
 
@@ -72,8 +72,8 @@
 
     <div class="panel" id="uploader">
       <div class="row">
-        <label class="file" for="csvFile">📄 匯入 CSV（UTF-8）</label>
-        <input id="csvFile" type="file" accept=".csv" />
+        <label class="file" for="csvFile">📄 匯入 CSV / XLSX / JSON</label>
+        <input id="csvFile" type="file" accept=".csv,.xlsx,.json,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" />
         <button class="btn" id="btnClear">清空</button>
         <div class="right kv">
           <span class="k">統計：</span>
@@ -84,7 +84,7 @@
       </div>
       <div class="row" style="margin-top:10px">
         <div class="notice">
-          <b>最小欄位：</b>客戶代號（必填），其它欄位名稱需和 JSON 的 features.key 對得上（或用 mapping.alias 對應）。
+          <b>最小欄位：</b>客戶代號（必填），其它欄位名稱需和 JSON 的 features.key 對得上（或用 mapping.alias 對應）。工作表可為「自然人 / 非自然人」兩頁。
         </div>
       </div>
     </div>
@@ -147,11 +147,11 @@
       </div>
     </div>
 
-    <footer>© 2025 AIT3 • 前端計分 • JSON 為唯一規則來源（可 fallback CSV R/A）</footer>
+    <footer>© 2025 AIT3 • 前端計分 • JSON 為唯一規則來源（可 fallback CSV/XLSX R/A）</footer>
   </div>
 
 <script>
-/* ===== 0) JSON 規則來源（依序嘗試） ===== */
+/* ===== 0) JSON 規則來源（依序嘗試；可被本地上傳覆蓋） ===== */
 const RULES_SOURCES = [
   './rules.latest.json',
   'https://raw.githubusercontent.com/pureplume/ait3-rules/main/rules.latest.json'
@@ -176,7 +176,7 @@ const kNorm=s=>String(s||'').toLowerCase().replace(/\uFEFF/g,'').replace(/\r?\n/
 function warn(msg){ el('#errBox').innerHTML = '<div class="err">⚠️ '+ msg +'</div>'; }
 function clearWarn(){ el('#errBox').innerHTML = ''; }
 
-/* ===== 2) 載入 JSON（支援新舊結構；允許註解） ===== */
+/* ===== 2) 載入 JSON（支援新舊結構；允許註解；可本地覆蓋） ===== */
 async function loadRules(){
   let lastErr='';
   for(const url of RULES_SOURCES){
@@ -184,116 +184,172 @@ async function loadRules(){
       const res=await fetch(url+'?v='+Date.now(),{cache:'no-store'}); if(!res.ok){lastErr='HTTP '+res.status; continue;}
       const text=await res.text();
       const raw=JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,''));
-
-      // 尋找節點
-      const node=(function find(o){
-        if(!o||typeof o!=='object') return null;
-        if((o.cut||o.matrix) && (o.labels||o.matrix?.labels)) return o;
-        for(const k of Object.keys(o)){ const n=find(o[k]); if(n) return n; }
-        return null;
-      })(raw);
-      if(!node){ lastErr='未找到 cut/labels'; continue; }
-
-      // 兼容舊/新鍵位
-      const cut = node.cut || node.matrix?.cut || {R:{hi:70,mid:40},A:{hi:70,mid:40}};
-      const labels = node.labels || node.matrix?.labels || {};
-      const mapping = node.mapping || node.edw_common || {};
-      const compute = node.compute || null;
-      const natural = node.natural || node['natural_person'] || null;
-      const corporate = node.corporate || node['corp'] || null;
-
-      RULES={ cut, labels, mapping, compute, natural, corporate };
+      RULES = normalizeRules(raw);
       RULES_URL_INUSE=url;
-
-      // 轉接器：把 v1.3 的 natural/corporate.features → compute.R/A
-      buildComputeFromV13(RULES);
-
       clearWarn(); return;
     }catch(e){ lastErr=e.message; continue; }
   }
   RULES=null; warn('規則載入失敗：'+lastErr+'。來源已全部嘗試：\n'+RULES_SOURCES.join('\n'));
 }
-
-/* ===== 2.5) v1.3 → compute 轉接器（R/A 分側；權重皆為正） ===== */
-function normHdr(s){ return String(s||'').trim().replace(/\s+/g,''); }
-function pickKeyFrom(rec, key, aliases=[]) {
-  const want = new Set([normHdr(key), ...aliases.map(normHdr)]);
-  for (const k of Object.keys(rec)) {
-    if (want.has(normHdr(k))) return k;
+function loadRulesFromObject(rawObj, srcName='(local JSON)'){
+  try{
+    RULES = normalizeRules(rawObj);
+    RULES_URL_INUSE = srcName;
+    clearWarn();
+    renderDiagnostics();
+    process();
+  }catch(e){
+    warn('本地 JSON 規則解析失敗：'+e.message);
   }
-  return key;
 }
+
+/* ===== 2.5) v1.3 正規化 → compute R/A + labels/cut/mapping ===== */
+function normalizeRules(raw){
+  // 找到主節點
+  const node=(function find(o){
+    if(!o||typeof o!=='object') return null;
+    if((o.cut||o.matrix) && (o.labels||o.matrix?.labels)) return o;
+    for(const k of Object.keys(o)){ const n=find(o[k]); if(n) return n; }
+    return null;
+  })(raw)||raw;
+
+  const cut = node.cut || node.matrix?.cut || {R:{hi:70,mid:40},A:{hi:70,mid:40}};
+  const labels = node.labels || node.matrix?.labels || {};
+  const mapping = node.mapping || node.edw_common || {};
+  const compute = node.compute || null;
+  const natural = node.natural || node['natural_person'] || null;
+  const corporate = node.corporate || node['corp'] || null;
+
+  const R={ cut, labels, mapping, compute, natural, corporate };
+  buildComputeFromV13(R);
+  return R;
+}
+
+/* ===== 2.6) v1.3 → compute 轉接器（完整型別支援） ===== */
 function buildComputeFromV13(R){
   const comp = R.compute || {R:{features:[]}, A:{features:[]}};
   if(!comp.R) comp.R = {features:[]};
   if(!comp.A) comp.A = {features:[]};
 
-  const pushFeat = (side, srcFeat, originEntity) => {
-    const w = (typeof srcFeat.weight==='object') ? (side==='R'? srcFeat.weight.R : srcFeat.weight.A) : srcFeat.weight;
-    const wNum = Number(w);
-    if(!Number.isFinite(wNum) || wNum<=0) return;
+  const push = (side, f)=>{ if(!f) return; comp[side].features.push(f); };
 
+  const convertBinsByThresholds = (pairs) => {
+    // e.g. [[3000000,1.0],[1000000,0.7]...] (遞減門檻)
+    if(!Array.isArray(pairs)) return null;
+    const out=[];
+    for(let i=0;i<pairs.length;i++){
+      const th = Number(pairs[i][0]), sc = Number(pairs[i][1]||0);
+      const next = (i>0)? Number(pairs[i-1][0]) : Infinity;
+      out.push({min:th, max:next, score:sc});
+    }
+    return out;
+  };
+
+  const adaptFeature = (srcFeat, originEntity) => {
+    const wR = (typeof srcFeat.weight==='object')? Number(srcFeat.weight.R||0) : Number(srcFeat.weight||0);
+    const wA = (typeof srcFeat.weight==='object')? Number(srcFeat.weight.A||0) : 0;
     const sc = srcFeat.score || {};
-    const f = {
+    const type = String(sc.type||'').toLowerCase();
+
+    const base = {
       key: srcFeat.key,
       label: srcFeat.label || srcFeat.key,
-      aliases: Array.isArray(srcFeat.aliases)? srcFeat.aliases.slice(0):[],
-      weight: wNum,
+      aliases: Array.isArray(srcFeat.aliases)? srcFeat.aliases.slice(0) : [],
       entity: originEntity
     };
 
-    const type = String(sc.type||'').toLowerCase();
+    // 類別對映
+    if(type==='categorical_map'){
+      const table = sc.mapping || sc.map || {};
+      if(wR>0) push('R', {...base, weight:wR, preprocess:'raw', table});
+      if(wA>0) push('A', {...base, weight:wA, preprocess:'raw', table});
+      return;
+    }
 
-    if(type==='categorical_map' && sc.map && typeof sc.map==='object'){
-      f.preprocess = 'raw';
-      f.table = sc.map;
-      comp[side].features.push(f);
+    // 金額/一般數值分箱
+    if(type==='numeric_bins_amt' || type==='numeric_bins' || type==='numeric_step_ge' || type==='numeric_ranges'){
+      const bins = convertBinsByThresholds(sc.bins||sc.steps) || null;
+      if(bins){
+        if(wR>0) push('R', {...base, weight:wR, bins});
+        if(wA>0) push('A', {...base, weight:wA, bins});
+      }
       return;
     }
-    if(type.startsWith('numeric_bins') && Array.isArray(sc.bins) && sc.bins.length){
-      const bins = [];
-      for(const b of sc.bins){
-        if(('min' in b) || ('max' in b)){
-          bins.push({min:('min' in b)? Number(b.min):-Infinity, max:('max' in b)? Number(b.max):Infinity, score:Number(b.score)||0});
-        }else if(b.op){
-          const th=Number(b.th), hi=Number(b.hi);
-          switch(b.op){
-            case '<':  bins.push({min:-Infinity, max:th, score:Number(b.score)||0}); break;
-            case '<=': bins.push({min:-Infinity, max:th, score:Number(b.score)||0}); break;
-            case '>':  bins.push({min:th, max:Infinity, score:Number(b.score)||0}); break;
-            case '>=': bins.push({min:th, max:Infinity, score:Number(b.score)||0}); break;
-            case 'between':
-              if(Number.isFinite(th)&&Number.isFinite(hi)) bins.push({min:Math.min(th,hi), max:Math.max(th,hi), score:Number(b.score)||0});
-              break;
-            case 'else': bins.push({min:-Infinity, max:Infinity, score:Number(b.score)||0}); break;
-          }
-        }
-      }
-      if(bins.length){
-        f.bins = bins;
-        if(typeof sc.preprocess==='string') f.preprocess = sc.preprocess;
-        comp[side].features.push(f);
-        return;
-      }
+
+    // 數量門檻（business_multi）：此處採「只用 count 欄位」
+    if(type==='business_multi'){
+      const steps = sc.steps_by_count || [];
+      const pairs = steps.map(([th,score])=>[th,score]);
+      const bins = convertBinsByThresholds(pairs);
+      // 嘗試以 count_field 或 key 直接對應
+      const countAliases = []; if (sc.count_field) countAliases.push(sc.count_field);
+      if(wR>0) push('R', {...base, weight:wR, bins, aliases:[...(base.aliases||[]), ...countAliases]});
+      if(wA>0) push('A', {...base, weight:wA, bins, aliases:[...(base.aliases||[]), ...countAliases]});
+      return;
     }
+
+    // 金額差額（上升→R；下降→A）
+    if(type==='numeric_bins_amt_diff'){
+      const upPairs = sc.up_bins_twd || sc.up_bins_cnt || [];
+      const downPairs = sc.down_bins_twd || sc.down_bins_cnt || [];
+      const upBins = convertBinsByThresholds(upPairs);
+      const downBins = convertBinsByThresholds(downPairs)?.map(b=>({min:-b.max, max:-b.min, score:b.score})) || null;
+      if(wR>0 && upBins) push('R', {...base, weight:wR, bins:upBins});      // x >= 門檻
+      if(wA>0 && downBins) push('A', {...base, weight:wA, bins:downBins});  // x <= -門檻
+      return;
+    }
+
+    // 百分點差（pp）
+    if(type==='numeric_bins_pp'){
+      const upPairs = sc.bins_up || [];
+      const downPairs = sc.bins_down || [];
+      const upBins = convertBinsByThresholds(upPairs);
+      const downBins = convertBinsByThresholds(downPairs)?.map(b=>({min:-Infinity, max:b.max, score:b.score})) || null;
+      if(wR>0 && upBins) push('R', {...base, weight:wR, bins:upBins});
+      if(wA>0 && downBins) push('A', {...base, weight:wA, bins:downBins});
+      return;
+    }
+
+    // 百分比差（% 或 小數）
+    if(type==='numeric_bins_pct_diff'){
+      const upPairs = sc.bins_up_pct || [];
+      const downPairs = sc.bins_down_pct || [];
+      const upBins = convertBinsByThresholds(upPairs);
+      const downBins = convertBinsByThresholds(downPairs)?.map(b=>({min:-Infinity, max:b.max, score:b.score})) || null;
+      if(wR>0 && upBins) push('R', {...base, weight:wR, bins:upBins, preprocess:'percent'});
+      if(wA>0 && downBins) push('A', {...base, weight:wA, bins:downBins, preprocess:'percent'});
+      return;
+    }
+
+    // if/score 規則
     if(Array.isArray(sc.rules) && sc.rules.length){
-      f.rule = sc.rules.map(r=>({ if:String(r.if||'').trim(), score:Number(r.score)||0 }));
-      if(typeof sc.preprocess==='string') f.preprocess = sc.preprocess;
-      comp[side].features.push(f);
+      const rule = sc.rules.map(r=>({if:String(r.if||'').trim(), score:Number(r.score)||0}));
+      if(wR>0) push('R', {...base, weight:wR, rule});
+      if(wA>0) push('A', {...base, weight:wA, rule});
       return;
     }
+
+    // 排除（Z）
+    if(type==='binary_exclude'){
+      // 記錄到 mapping.core.blacklist 的別名集合，讓 isExcluded 能找到
+      R._binary_exclude = R._binary_exclude || [];
+      R._binary_exclude.push({key: srcFeat.key, aliases: (srcFeat.aliases||[]).slice(0)});
+      return;
+    }
+
+    // 其他型別：略過
   };
 
   const nat = Array.isArray(R.natural?.features)? R.natural.features : [];
   const cor = Array.isArray(R.corporate?.features)? R.corporate.features : [];
 
-  for(const f of nat){ pushFeat('R', f, 'natural'); pushFeat('A', f, 'natural'); }
-  for(const f of cor){ pushFeat('R', f, 'corp');    pushFeat('A', f, 'corp');    }
+  nat.forEach(f=>adaptFeature(f,'natural'));
+  cor.forEach(f=>adaptFeature(f,'corp'));
 
   R.compute = comp;
 }
 
-/* ===== 3) CSV 解析 ===== */
+/* ===== 3) 解析 CSV / XLSX / JSON 檔案 ===== */
 function csvParse(text){
   const rows=[]; let i=0,field='',row=[],q=false;
   const push=()=>{row.push(field);field=''}; const pushRow=()=>{rows.push(row);row=[]};
@@ -306,44 +362,73 @@ function csvParse(text){
   const headers=hdr.map(normHeader); CURRENT_HEADERS=headers;
   return rows.filter(r=>r.some(x=>x!=='')).map(r=>Object.fromEntries(headers.map((h,idx)=>[h, r[idx]??''])));
 }
+function xlsxParse(arrayBuffer){
+  const wb = XLSX.read(arrayBuffer, {type:'array'});
+  const sheetNames = wb.SheetNames||[];
+  const all=[];
+  sheetNames.forEach(sn=>{
+    const ws = wb.Sheets[sn];
+    if(!ws) return;
+    const json = XLSX.utils.sheet_to_json(ws, {raw:true, defval:''}); // 以首列為欄名
+    if(!json.length) return;
+    const headers = Object.keys(json[0]||{}).map(normHeader);
+    CURRENT_HEADERS = headers;
+    // 若未提供客群欄位，依工作表名推斷
+    const isNat = /自然人/i.test(sn);
+    const isCorp = /非自然人|法人/i.test(sn);
+    json.forEach(r=>{
+      const rec = {...r};
+      if(!('自然人/非自然人' in rec) && !('自然人/\n非自然人' in rec)){
+        if(isNat) rec['自然人/\n非自然人']='自然人';
+        if(isCorp) rec['自然人/\n非自然人']='非自然人';
+      }
+      all.push(rec);
+    });
+  });
+  return all;
+}
 
-/* ===== 4) 欄位對應 & 常用欄位（補：換行/別名/負面名單） ===== */
+/* ===== 4) 欄位對應 & 常用欄位（補：換行/別名/負面名單/二元排除） ===== */
 function coreMap(){
   if(RULES?.mapping?.core) return RULES.mapping.core;
   const h=new Map(CURRENT_HEADERS.map(x=>[kNorm(x),x]));
   const pick=(...c)=>{ for(const s of c){ const k=h.get(kNorm(s)); if(k) return k; } return c[0]; };
   return {
-    id:       pick('客戶代號','客戶代號\n','客戶id','id','客編'),
-    name:     pick('客戶名稱','名稱','name'),
-    entity:   pick('自然人/非自然人','自然人/\n非自然人','客群','entity'),
-    // 黑名單 / 負面名單的常見寫法
-    blacklist:pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','負面名單','BLACKLIST')
+    id: pick('客戶代號','客戶代號\n','客戶id','id','客編','CUST_ID'),
+    name: pick('客戶名稱','名稱','name','CUST_NAME'),
+    entity: pick('自然人/非自然人','自然人/\n非自然人','客群','entity','ENTITY_TYPE'),
+    blacklist: pick('合規黑名單','黑名單','不配合盡職審查','不配合\n盡職審查','負面名單','EXCLUSION_OR_NO_CONSENT','Z_FLAG','BLACKLIST')
   };
 }
 function isExcluded(rec){
   const cm=coreMap();
-  const v=String(rec[cm.blacklist]||'').trim();
-  return /^(1|true|y|yes|是|true|True)$/i.test(v);
+  const valMain = String(rec[cm.blacklist]??'').trim();
+  const truthy = /^(1|true|y|yes|是|Y)$/i.test(valMain);
+  if(truthy) return true;
+  // 若規則有 binary_exclude 之 key/aliases，也納入判斷
+  if(Array.isArray(RULES?._binary_exclude)){
+    const idx=new Map(Object.keys(rec).map(k=>[kNorm(k),k]));
+    for(const ex of RULES._binary_exclude){
+      const candidates=[ex.key, ...(ex.aliases||[])];
+      for(const c of candidates){
+        const k = idx.get(kNorm(c)); if(!k) continue;
+        const v = String(rec[k]??'').trim();
+        if(/^(1|true|y|yes|是|Y)$/i.test(v)) return true;
+      }
+    }
+  }
+  return false;
 }
-
-/* ===== 自動判別自然人 / 法人（含「非自然人」） ===== */
 function inferEntity(rec){
-  const cm=coreMap();
-  const raw=(rec[cm.entity] ?? '').toString().trim();
-  const alias={
-    '自然人':'natural','個人':'natural',
-    '法人':'corp','公司':'corp','非自然人':'corp'
-  };
+  const cm=coreMap(); const raw=(rec[cm.entity] ?? '').toString().trim();
+  const alias={ '自然人':'natural','個人':'natural', '法人':'corp','公司':'corp','非自然人':'corp' };
   const mapped = alias[raw] || raw.toLowerCase();
   if(mapped==='natural' || mapped==='corp') return mapped;
-
-  // 無標示時：用公司類特徵推斷
   const corpHints=[
-    '公司營收','成立年限','策略性產業別(ETL)',
-    '客戶等級/授信等級','往來業務多樣性(大類數)',
+    '公司營收','成立年限','策略性產業別(ETL)','客戶等級/授信等級','往來業務多樣性(大類數)',
     '授信額度使用率_本期','企金授信_額度動用率','企金放款_額度動用率'
   ];
-  return corpHints.some(k=>k in rec) ? 'corp' : 'natural';
+  return corpHints.some(k=>k in rec)? 'corp':'natural';
 }
 
 /* ===== 5) 前端計分引擎 ===== */
@@ -355,7 +440,7 @@ function pickField(rec, key, alias=[]) {
   return null;
 }
 function preprocessVal(v, pre){
-  if(pre==='raw') return v;
+  if(pre==='raw') return v;           // 類別用原字串
   let x=asNum(v);
   if(!isNum(x)) return NaN;
   if(pre==='percent'){
@@ -390,7 +475,10 @@ function scoreByRule(x, feature){
   }
   if(Array.isArray(feature.bins)){
     const xv = asNum(x); if(!isNum(xv)) return 0;
-    for(const b of feature.bins){ const lo=('min' in b)? Number(b.min):-Infinity; const hi=('max' in b)? Number(b.max):Infinity; if(xv>=lo && xv<=hi) return Number(b.score)||0; }
+    for(const b of feature.bins){
+      const lo=('min' in b)? Number(b.min):-Infinity; const hi=('max' in b)? Number(b.max):Infinity;
+      if(xv>=lo && xv<=hi) return Number(b.score)||0;
+    }
     return 0;
   }
   if(feature.table && typeof feature.table==='object'){
@@ -412,8 +500,8 @@ function computeScore(rec, block, entity){
     const field = pickField(rec, f.key, f.alias||f.aliases||[]);
     const raw = field? rec[field] : null;
     const val = preprocessVal(raw, f.preprocess);
-    const s = scoreByRule(val, f);
-    const w = Number(f.weight)||0;
+    const s = scoreByRule(val, f);   // → 0~1
+    const w = Number(f.weight)||0;   // 可為 R/A 不同權重
     if(w<=0) continue;
     sum += s * w;
     wsum += w;
@@ -423,13 +511,18 @@ function computeScore(rec, block, entity){
   return clamp(Math.round(scaled), 0, 100);
 }
 
-/* fallback：CSV 若已提供 R/A */
-function pickRAfromCSV(rec){
+/* fallback：CSV/XLSX 直接提供 R/A 時 */
+function pickRAfromFileRec(rec){
   const ms=RULES?.mapping?.score||{};
   const keys=Object.keys(rec); const idx=new Map(keys.map(k=>[kNorm(k),k]));
-  const tryKey=(given, fb)=>{ if(given&&rec[given]!=null) return given; if(given&&idx.has(kNorm(given))) return idx.get(kNorm(given)); for(const x of fb){ if(rec[x]!=null) return x; const k=idx.get(kNorm(x)); if(k) return k; } return null; };
-  const rKey=tryKey(ms.R, ['R','推薦分數','推薦R','加權推薦分數','R分數']);
-  const aKey=tryKey(ms.A, ['A','關注分數','關注A','加權關注分數','A分數']);
+  const tryKey=(given, fb)=>{
+    if(given&&rec[given]!=null) return given;
+    if(given&&idx.has(kNorm(given))) return idx.get(kNorm(given));
+    for(const x of fb){ if(rec[x]!=null) return x; const k=idx.get(kNorm(x)); if(k) return k; }
+    return null;
+  };
+  const rKey=tryKey(ms.R, ['R','推薦分數','推薦R','加權推薦分數','R分數','R_SCORE']);
+  const aKey=tryKey(ms.A, ['A','關注分數','關注A','加權關注分數','A分數','A_SCORE']);
   if(!rKey||!aKey) return null;
   const R=asNum(rec[rKey]), A=asNum(rec[aKey]); if(!isNum(R)||!isNum(A)) return null;
   return { R:clamp(R,0,100), A:clamp(A,0,100) };
@@ -464,8 +557,8 @@ function process(){
       reason = 'compute(JSON)';
     }
     if((R===null || A===null)){
-      const ra = pickRAfromCSV(rec);
-      if(ra){ if(R===null) R=ra.R; if(A===null) A=ra.A; reason += (reason?'+':'')+'csv(R/A)'; }
+      const ra = pickRAfromFileRec(rec);
+      if(ra){ if(R===null) R=ra.R; if(A===null) A=ra.A; reason += (reason?'+':'')+'file(R/A)'; }
     }
 
     const cell = (excluded || !isNum(R) || !isNum(A)) ? null : decideCell(R,A);
@@ -569,7 +662,7 @@ function renderDiagnostics(){
   const cm=coreMap();
   const hasCompR=!!(RULES?.compute?.R?.features?.length);
   const hasCompA=!!(RULES?.compute?.A?.features?.length);
-  const mode = (hasCompR||hasCompA) ? '前端計分（JSON compute）' : 'fallback：讀 CSV R/A';
+  const mode = (hasCompR||hasCompA) ? '前端計分（JSON compute）' : 'fallback：讀 檔案 R/A';
   el('#diagBox').innerHTML = `
     <div class="notice">
       <b>規則檢核</b>
@@ -577,19 +670,40 @@ function renderDiagnostics(){
       <div class="kvline">模式：<b>${mode}</b></div>
       <div class="kvline">核心欄位：客戶代號 <code>${cm.id}</code>／客群 <code>${cm.entity}</code>／黑名單 <code>${cm.blacklist}</code></div>
       <div class="kvline">R features：<code>${hasCompR ? RULES.compute.R.features.length : 0}</code>；A features：<code>${hasCompA ? RULES.compute.A.features.length : 0}</code></div>
-      <div class="kvline">提示：CSV 欄位名稱需與 <code>features[].key</code> 或其 <code>aliases</code> 對得上；缺值視為 0 分。</div>
+      <div class="kvline">提示：欄位需與 <code>features[].key</code> 或其 <code>aliases</code> 對得上；缺值視為 0 分。</div>
     </div>`;
 }
 
-/* ===== 9) 事件 & 啟動 ===== */
-async function handleCsvInput(file){ if(!file) return; const text=await file.text(); dataRows=csvParse(text); process(); }
-el('#csvFile').addEventListener('change', e=>handleCsvInput(e.target.files?.[0]));
+/* ===== 9) 事件 & 啟動（同一輸入支援 CSV / XLSX / JSON） ===== */
+async function handleInputFile(file){
+  if(!file) return;
+  const name=(file.name||'').toLowerCase();
+  try{
+    if(name.endsWith('.json')){
+      const text = await file.text();
+      const raw = JSON.parse(text.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,''));
+      loadRulesFromObject(raw, file.name);
+      return;
+    }
+    if(name.endsWith('.xlsx')){
+      const buf = await file.arrayBuffer();
+      dataRows = xlsxParse(buf);
+      process(); return;
+    }
+    // default: csv
+    const text=await file.text();
+    dataRows=csvParse(text); process();
+  }catch(e){
+    warn('檔案解析失敗：'+e.message);
+  }
+}
+el('#csvFile').addEventListener('change', e=>handleInputFile(e.target.files?.[0]));
 el('#btnClear').onclick=()=>{ dataRows=[]; enriched=[]; render(); el('#csvFile').value=''; };
 el('#selEntity').onchange=()=>process();
 el('#selPage').onchange=()=>renderTable();
 document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); render(); });
 
-/* ===== 匯出 Excel ===== */
+/* ===== 匯出 Excel（保留你原本功能） ===== */
 (function(){
   function exportDecisionXLSX(){
     const arr = (Array.isArray(enriched) && enriched.length)? enriched : null;
@@ -628,7 +742,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{ await loadRules(); ren
       return;
     }
     const table = document.getElementById('resultTbl');
-    if(!table){ alert('沒有可匯出的資料（請先載入 CSV 並完成計算）'); return; }
+    if(!table){ alert('沒有可匯出的資料（請先載入 CSV/XLSX 並完成計算）'); return; }
     const wb2 = XLSX.utils.book_new();
     const ws2 = XLSX.utils.table_to_sheet(table, {raw:true});
     XLSX.utils.book_append_sheet(wb2, ws2, 'decision_result');
